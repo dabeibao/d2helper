@@ -1,0 +1,3 @@
+LIBRARY	"d2helper"
+EXPORTS
+   QueryInterface       @1

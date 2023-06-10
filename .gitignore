@@ -1,0 +1,9 @@
+*.si4project
+.vs
+Release
+build
+Debug
+GTAGS
+GRTAGS
+GPATH
+/.cache/

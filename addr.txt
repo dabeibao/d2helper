@@ -1,0 +1,30 @@
+6FAE8BED | 8D0440                   | lea eax,dword ptr ds:[eax+eax*2]        |
+6FAE8BF0 | 8B1C85 104FBA6F          | mov ebx,dword ptr ds:[eax*4+6FBA4F10]   | load
+6FAE8BF7 | 85DB                     | test ebx,ebx                            |
+6FAE8BF9 | 75 12                    | jne d2client.6FAE8C0D                   |
+6FAE8BFB | 83C1 0A                  | add ecx,A                               |
+
+6FAE9D40?
+
+
+6FAE9D40 | 51                       | push ecx                                |
+6FAE9D41 | 53                       | push ebx                                |
+6FAE9D42 | 8D4424 04                | lea eax,dword ptr ss:[esp+4]            |
+6FAE9D46 | 50                       | push eax                                |
+6FAE9D47 | BB 03000000              | mov ebx,3                               |
+6FAE9D4C | C64424 08 3F             | mov byte ptr ss:[esp+8],3F              | 3F:'?'
+6FAE9D51 | 66:C74424 09 1A00        | mov word ptr ss:[esp+9],1A              |
+6FAE9D58 | E8 83A6FDFF              | call d2client.6FAC43E0                  |
+6FAE9D5D | 5B                       | pop ebx                                 |
+6FAE9D5E | 59                       | pop ecx                                 |
+
+
+storm: WM_KEYDOWN
+6FC24262 | 8D4424 10                | lea eax,dword ptr ss:[esp+10]           |
+
+03464130 d2game.34130
+
+move.b d2game.034763ba 0x74   xxx -> je?
+move.b d2game.034763bb 0x20   xxx  ->  always jump to d2game.0x3763dc
+move.b d2game.0346f14d 0xb8   force jump to d2game.346f192
+move.b d2game.0346f14e 0x00   force jump to d2game.346f192
