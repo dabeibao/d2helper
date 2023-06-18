@@ -46,6 +46,8 @@
 #define MOUSE_OFFSET_X  (*p_D2MouseOffsetX)
 #define MOUSE_OFFSET_Y  (*p_D2MouseOffsetY)
 
+#define WEAPON_SWITCH   (*p_D2WeaponSwitch)
+
 
 #endif
 

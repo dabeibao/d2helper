@@ -39,7 +39,6 @@ struct SkillTime {
 #define trace(fmt, ...)         log_verbose(fmt, ##__VA_ARGS__)
 #endif
 
-
 static bool isFastCastAble()
 {
     if (D2Util::getState() != D2Util::ClientStateInGame) {
@@ -348,6 +347,14 @@ private:
             return Continue;
         }
 
+        if (D2Util::getWeaponSwitch() != mCurrentSwitch) {
+            fcDbg(L"Switch weapon, finish restore");
+            mOrigSkillId = -1;
+            mState = Idle;
+            finishWaitRestore();
+            return Continue;
+        }
+
         if (mWaitRestoreStart == 0) {
             mWaitRestoreStart = GetTickCount64();
             mRestoreDelayTimer.start(200);
@@ -366,7 +373,7 @@ private:
             return Continue;
         }
 
-        // User is selecting a new skill
+        // User is selecting a new skill or switching weapon
         if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
             mOrigSkillId = -1;
             mState = Idle;
@@ -401,6 +408,7 @@ private:
     {
         if (mOrigSkillId == -1) {
             mOrigSkillId = D2Util::getRightSkillId();
+            mCurrentSwitch = D2Util::getWeaponSwitch();
         }
         mIsRunning = true;
         mActor.startSkill(st);
@@ -434,6 +442,7 @@ private:
     RunActor            mActor;
 
     int                 mOrigSkillId;
+    BYTE                mCurrentSwitch;
     uint64_t            mWaitRestoreStart;
     Timer               mRestoreDelayTimer;
 };
@@ -444,7 +453,7 @@ static bool doFastCast(BYTE key, BYTE repeat)
         D2Util::showVerbose(L"Not in Game: %d, repeat %d", D2CheckUiStatus(0), repeat);
         return false;
     }
-    fcDbg(L"key: %d, repeat %d", key, repeat);
+    fcDbg(L"key: %d, repeat %d, swap 0x%x", key, repeat, WEAPON_SWITCH);
     int         func = D2Util::getKeyFunc(key);
 
     if (func < 0) {

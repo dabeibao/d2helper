@@ -65,6 +65,11 @@ inline int getRightSkillId()
     return -1;
 }
 
+inline BYTE getWeaponSwitch()
+{
+    return WEAPON_SWITCH;
+}
+
 int getKeyFunc(BYTE key);
 int getSkillId(int func);
 void setSkill(WORD skillId, bool left = false);
