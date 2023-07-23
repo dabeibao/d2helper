@@ -39,6 +39,54 @@ struct SkillTime {
 #define trace(fmt, ...)         log_verbose(fmt, ##__VA_ARGS__)
 #endif
 
+static WNDPROC getOrigProc(HWND hwnd)
+{
+    TCHAR       className[64];
+    int         classNameLen;
+    WNDCLASS    classInfo;
+    HINSTANCE   hInst = GetModuleHandle(NULL);
+    WNDPROC     orig;
+
+    if (hInst == NULL) {
+        return NULL;
+    }
+    // Get "Diablo II" class name
+    classNameLen = GetClassName(hwnd, &className[0], sizeof(className) / sizeof(className[0]));
+    if (classNameLen == 0) {
+        trace("Failed to get class name\n");
+        return FALSE;
+    }
+    if (!GetClassInfo(hInst, className, &classInfo)) {
+        trace("Failed to get class info\n");
+        return FALSE;
+    }
+    orig = classInfo.lpfnWndProc;
+    trace("Orig proc: %p\n", orig);
+    return orig;
+}
+
+__declspec(noinline)
+LRESULT WINAPI mySendMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    static WNDPROC      origProc;
+    static BOOL         isGot;
+
+    LRESULT             ret;
+
+    trace("Get message 0x%x param 0x%x 0x%x\n", msg, wParam, lParam);
+    if (!isGot) {
+        origProc = getOrigProc(hWnd);
+        isGot = TRUE;
+    }
+    if (origProc != NULL) {
+        ret = CallWindowProcA(origProc, hWnd, msg, wParam, lParam);
+    } else {
+        ret = SendMessageA(hWnd, msg, wParam, lParam);
+    }
+
+    return ret;
+}
+
 static bool isFastCastAble()
 {
     if (D2Util::getState() != D2Util::ClientStateInGame) {
@@ -167,17 +215,17 @@ private:
         //D2Util::screenToAutoMap(&screenPos, &mCurrentPos);
         trace("%s: send mouse event skill %d cur %d\n", __FUNCTION__,
               mSkill.skillId, D2Util::getRightSkillId());
-        SendMessage(origD2Hwnd, WM_RBUTTONDOWN, MK_RBUTTON,
-                    ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
-        SendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON,
-                    ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
+        mySendMessage(origD2Hwnd, WM_RBUTTONDOWN, MK_RBUTTON,
+                      ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
+        mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON,
+                      ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
         next(&RunActor::done, 10);
     }
 
     void sendMouseUp()
     {
-        SendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON,
-                    ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
+        mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON,
+                      ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
         next(&RunActor::done, 5);
         trace("%s: skill %d mouse sent\n", __FUNCTION__, mSkill.skillId);
     }
