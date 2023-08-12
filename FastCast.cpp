@@ -12,6 +12,8 @@
 #include "Actor.hpp"
 #include "D2CallStub.hpp"
 #include "Event.hpp"
+#include "cConfigLoader.hpp"
+#include "hotkey.hpp"
 
 struct SkillTime {
     int         key;
@@ -38,6 +40,10 @@ struct SkillTime {
 #define fcDbg(fmt, ...)
 #define trace(fmt, ...)         log_verbose(fmt, ##__VA_ARGS__)
 #endif
+
+
+static bool fastCastEnabled;
+static uint32_t fastCastToggleKey = Hotkey::Invalid;
 
 static WNDPROC getOrigProc(HWND hwnd)
 {
@@ -89,56 +95,10 @@ LRESULT WINAPI mySendMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 static bool isFastCastAble()
 {
-    if (D2Util::getState() != D2Util::ClientStateInGame) {
+    if (!fastCastEnabled) {
         return false;
     }
-    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
-        fcDbg(L"Curr Skill");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
-        fcDbg(L"Input");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_INTERACT)) {
-        fcDbg(L"INTERACT");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
-        fcDbg(L"Game Menu");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_NPCTRADE)) {
-        fcDbg(L"Trade");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_MODITEM)) {
-        fcDbg(L"Mod");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_PPLTRADE)) {
-        fcDbg(L"PP Trade");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_MSGLOG)) {
-        fcDbg(L"MSG");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_STASH)) {
-        fcDbg(L"Stash");
-        return false;
-    }
-    if (D2Util::uiIsSet(UIVAR_CUBE)) {
-        fcDbg(L"CUBE");
-        return false;
-    }
-    bool left = D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET);
-    bool right = D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS);
-    if (left && right) {
-        fcDbg(L"FULL");
-        return false;
-    }
-    return true;
+    return D2Util::isGameScreen();
 }
 
 class Watcher {
@@ -275,6 +235,21 @@ public:
             crank();
         };
     }
+
+    void  stop()
+    {
+        mActor.cancel();
+
+        mState = Idle;
+        mCrankCount = 0;
+        mPendingSkills.clear();
+        mIsRunning = false;
+        mOrigSkillId = -1;
+        mWaitRestoreStart = 0;
+        mRestoreDelayTimer.stop();
+    }
+
+
 
     void startSkill(const SkillTime& newSkill)
     {
@@ -463,19 +438,6 @@ private:
     }
 
 
-    void  stop()
-    {
-        mActor.cancel();
-
-        mState = Idle;
-        mCrankCount = 0;
-        mPendingSkills.clear();
-        mIsRunning = false;
-        mOrigSkillId = -1;
-        mWaitRestoreStart = 0;
-        mRestoreDelayTimer.stop();
-    }
-
     bool isRunning() const
     {
         return mIsRunning != 0;
@@ -521,10 +483,48 @@ static bool doFastCast(BYTE key, BYTE repeat)
     return true;
 }
 
+static bool fastCastToggle(struct HotkeyConfig * config)
+{
+    if (fastCastEnabled) {
+        FastCastActor::inst().stop();
+        fastCastEnabled = false;
+    } else {
+        fastCastEnabled = true;
+    }
+    log_verbose("FastCast: toggle: %d\n", fastCastEnabled);
+    D2Util::showInfo(L"快速施法已%s", fastCastEnabled? L"啟用" : L"禁用");
+
+    if ((config->hotKey & (Hotkey::Ctrl | Hotkey::Alt)) != 0) {
+        return true;
+    }
+
+    return false;
+}
+
+static void fastCastLoadConfig()
+{
+    auto section = CfgLoad::section("helper.fastcast");
+
+    fastCastEnabled = section.loadBool("enable", true);
+    auto keyString = section.loadString("toggleKey");
+    fastCastToggleKey = Hotkey::parseKey(keyString);
+
+    if (fastCastToggleKey != Hotkey::Invalid) {
+        log_trace("FastCast: toggle key %s -> 0x%llx\n", keyString.c_str(), (unsigned long long)fastCastToggleKey);
+    }
+    log_verbose("FastCast: enable: %d\n", fastCastEnabled);
+}
+
 static int fastCastModuleInstall()
 {
+    fastCastLoadConfig();
     keyRegisterHandler(doFastCast);
     FastCastActor::inst();
+
+    if (fastCastToggleKey != Hotkey::Invalid) {
+        keyRegisterHotkey(fastCastToggleKey, fastCastToggle, nullptr);
+    }
+
     return 0;
 }
 

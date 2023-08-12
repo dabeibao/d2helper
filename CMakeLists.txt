@@ -21,7 +21,7 @@ add_library(helper STATIC
     config.cpp D2Utils.cpp d2hmodule.cpp
     MapHelper.cpp FastCast.cpp Event.cpp Timer.cpp WinTM.cpp
 
-    KeyModule.cpp
+    KeyModule.cpp hotkey.cpp
 )
 
 target_link_libraries(d2helper helper)

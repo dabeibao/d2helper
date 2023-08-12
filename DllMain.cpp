@@ -3,7 +3,6 @@
 #include "log.h"
 
 HMODULE hInstDLL=NULL;
-char szPluginPath[MAX_PATH]="\0";
 
 void ReleaseMem()
 {
@@ -18,8 +17,6 @@ BOOL APIENTRY DllMain( HMODULE hModule,
 	case DLL_PROCESS_ATTACH:
 		hInstDLL = hModule;
 		DisableThreadLibraryCalls(hInstDLL);
-		GetModuleFileName( hInstDLL, szPluginPath, MAX_PATH );
-		*(strrchr( szPluginPath, '\\' ) + 1)='\0';
 		return Install();
 	case DLL_THREAD_ATTACH:
 		break;

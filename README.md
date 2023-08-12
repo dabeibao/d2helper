@@ -1,10 +1,34 @@
-D2工具箱
+# D2工具箱
 
-仅用于客户端。已支持功能：
+仅用于客户端。配置文件是dll所在目录的d2ext.ini
 
-1. 快捷键合成
+## 全局配置
 
-2. 快速施法（类似重置版）
+``` ini
+[helper.config]
+;;; 打开调试信息
+debug = 1
 
+;;; 更多打印信息
+verbose = 1
+```
 
-有好的想法欢迎留言
+## 快捷键合成
+
+``` ini
+[helper.key]
+;;; 合成快捷键. 快捷键是VK_的十进制值
+transmute = DDD
+```
+
+## 快速施法（类似重置版）
+
+``` ini
+[helper.fastcast]
+;;; 默认开启/关闭
+enable = true
+;;; 开启/关闭切换热键。格式类似是CTRL+ALT+SHIFT+G
+;;;   例如: toggleKey = CTRL        ;;; 按CTRL时切换
+;;;        toggleKey = CTRL+ALT+G   ;;; 同时按下CTRL ALT和G时切换
+toggleKey = CTRL+G
+```

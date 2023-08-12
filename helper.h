@@ -7,7 +7,7 @@ extern "C" {
 #include <stdbool.h>
 
 int     helper_install(void);
-void    helper_unstall(void);
+void    helper_uninstall(void);
 
 #ifdef __cplusplus
 }

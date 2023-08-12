@@ -78,5 +78,8 @@ void screenToAutoMap(const POINT * screenPos, POINT * mapPos);
 
 ClientState getState();
 
+// In game screen
+bool isGameScreen();
+
 
 }

@@ -2,6 +2,7 @@
 #include "d2ptrs.h"
 #include "D2Utils.hpp"
 #include "Define.h"
+#include "d2vars.h"
 
 bool D2Util::gVerbose;
 bool D2Util::gDebug;
@@ -116,3 +117,46 @@ D2Util::ClientState D2Util::getState()
     return ClientStateBusy;
 }
 
+bool D2Util::isGameScreen()
+{
+    if (D2Util::getState() != D2Util::ClientStateInGame) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_INTERACT)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_NPCTRADE)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_MODITEM)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_PPLTRADE)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_MSGLOG)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_STASH)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_CUBE)) {
+        return false;
+    }
+    bool left = D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET);
+    bool right = D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS);
+    if (left && right) {
+        return false;
+    }
+
+    return true;
+}

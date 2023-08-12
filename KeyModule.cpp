@@ -12,6 +12,8 @@
 #include "keyModule.hpp"
 #include "Event.hpp"
 #include "WinTM.hpp"
+#include "hotkey.hpp"
+
 
 #pragma comment(lib, "Comctl32.lib")
 
@@ -44,6 +46,7 @@ static KeyConfig keyConfigs[] = {
     { "transmute", 0, doTransmute,}
 };
 
+static HotkeyConfig hotkeyConfig[8];
 static KeyFunc keyPreFunc[8];
 
 static KeyConfig* validKeyConfigs[1024];
@@ -76,17 +79,64 @@ static bool doTransmute(KeyConfig * )
     return true;
 }
 
+static uint32_t keyGetCombineKey(BYTE keyCode)
+{
+    uint32_t    newKey = keyCode;
+    if (!D2Util::isGameScreen()) {
+        return Hotkey::Invalid;
+    }
+    if (keyCode == VK_CONTROL || keyCode == VK_MENU || keyCode == VK_SHIFT) {
+        newKey = 0;
+    }
+    if (GetKeyState(VK_CONTROL) & 0x8000) {
+        newKey |= Hotkey::Ctrl;
+    }
+    if (GetKeyState(VK_MENU) & 0x8000) {
+        newKey |= Hotkey::Alt;
+    }
+    if (GetKeyState(VK_SHIFT) & 0x8000) {
+        newKey |= Hotkey::Shift;
+    }
+    return newKey;
+}
+
+static bool keyProcessHotKey(BYTE keyCode)
+{
+    auto hotkey = keyGetCombineKey(keyCode);
+
+    log_verbose("KEY: hot 0x%x\n", hotkey);
+    if (hotkey == Hotkey::Invalid) {
+        return false;
+    }
+    for (int i = 0; i < ARRAY_SIZE(hotkeyConfig); i += 1) {
+        if (hotkeyConfig[i].func == nullptr) {
+            break;
+        }
+        if (hotkeyConfig[i].hotKey != hotkey) {
+            continue;
+        }
+        return hotkeyConfig[i].func(&hotkeyConfig[i]);
+    }
+
+    return false;
+}
+
 static bool keyDownPatch(BYTE keyCode, BYTE repeat)
 {
     log_verbose("key down called, player %p\n", PLAYER);
 
+    if (!repeat) {
+        bool blocked = keyProcessHotKey(keyCode);
+        if (blocked) {
+            return true;
+        }
+    }
     for (int i = 0; i < ARRAY_SIZE(keyPreFunc); i += 1) {
         if (keyPreFunc[i] == nullptr) {
             break;
         }
         bool    blocked = keyPreFunc[i](keyCode, repeat);
         if (blocked) {
-            D2Util::showVerbose(L"Blocked");
             return blocked;
         }
     }
@@ -219,6 +269,18 @@ static void keyModuleOnLoad()
 static void keyModuleReload()
 {
     loadKeyConfig();
+}
+
+void keyRegisterHotkey(uint32_t hotkey, bool (*func)(struct HotkeyConfig * config), void * ctx)
+{
+    for (int i = 0; i < ARRAY_SIZE(hotkeyConfig); i += 1) {
+        if (hotkeyConfig[i].hotKey == Hotkey::Invalid) {
+            hotkeyConfig[i].hotKey = hotkey;
+            hotkeyConfig[i].func = func;
+            hotkeyConfig[i].ctx = ctx;
+            break;
+        }
+    }
 }
 
 void keyRegisterHandler(KeyFunc func)
