@@ -249,6 +249,7 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     if (blocked) {
         return 0;
     }
+    WinTM::inst().checkTimer();
 
     return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }

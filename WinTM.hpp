@@ -20,13 +20,14 @@ public:
         return gTM;
     }
 
+    bool        checkTimer();
     void        onTimer(uintptr_t nId, bool * blocked)
     {
         if (nId != TIME_ID) {
             return;
         }
         *blocked = true;
-        onWinTimer();
+        checkTimer();
     }
     void        addTimer(Timer * t, int timeout);
     void        removeTimer(Timer * t);
@@ -58,7 +59,6 @@ private:
     void        onGameStop();
     bool        start();
     void        stop();
-    bool        onWinTimer();
 
 
 private:

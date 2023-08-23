@@ -34,7 +34,7 @@ void WinTM::onGameStop()
     stop();
 }
 
-bool WinTM::onWinTimer()
+bool WinTM::checkTimer()
 {
     uint64_t now = GetTickCount64();
 

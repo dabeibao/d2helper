@@ -476,7 +476,7 @@ static bool doFastCast(BYTE key, BYTE repeat)
         return false;
     }
 
-    fcDbg(L"KEY %u -> %u -> skill %u\n", key, func, skillId);
+    trace("KEY %u -> %u -> skill %u\n", key, func, skillId);
 
     FastCastActor::inst().startSkill({key, skillId, GetTickCount64()});
 
