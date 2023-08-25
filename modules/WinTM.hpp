@@ -5,7 +5,6 @@
 #include <vector>
 #include "D2Utils.hpp"
 #include "log.h"
-#include "signals.hpp"
 #include "TimerQueue.hpp"
 #include "Event.hpp"
 

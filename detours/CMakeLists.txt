@@ -1,0 +1,4 @@
+add_library(detours STATIC IMPORTED GLOBAL)
+
+set_target_properties(detours PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/detours.lib)
+set_target_properties(detours PROPERTIES INTERFACE_INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR})

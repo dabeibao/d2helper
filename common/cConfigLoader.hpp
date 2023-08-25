@@ -9,7 +9,7 @@
 class CfgLoad
 {
 public:
-    CfgLoad()
+    CfgLoad(const char * iniFile = CONFIG_FILE_NAME)
     {
         char * buf = _getcwd(NULL, 0);
         if (buf == nullptr) {
@@ -19,7 +19,7 @@ public:
         if (fileName.size() == 0 || fileName.c_str()[fileName.size() - 1] != '\\') {
             fileName += '\\';
         }
-        fileName += CONFIG_FILE_NAME;
+        fileName += iniFile;
         mConfig.setFileName(fileName.c_str());
         free(buf);
     }

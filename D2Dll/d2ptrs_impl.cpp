@@ -10,3 +10,18 @@
 #define D2ASMPTR2(d1,o1,o2,v1)        DWORD vD2##v1 = DLLOFFSET2(d1,o1,o2);
 
 #include "d2ptrs.inc"
+
+DWORD CalcFuncOffset_X(DWORD dwNo, DWORD dwBase, int iValue)
+{
+    if ( 0 > iValue )
+    {
+        return (dwNo | (iValue <<8));
+    }
+
+    return (dwNo | ((iValue - dwBase) <<8));
+}
+
+DWORD Map_D2Version()
+{
+    return D2_VER_113C;
+}

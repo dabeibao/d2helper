@@ -15,6 +15,11 @@ public:
         {
         }
 
+        bool save(const char * key, const std::string& value) const
+        {
+            return mConfig.save(mSection, key, value);
+        }
+
         std::string loadString(const char * key, const std::string& def="") const
         {
             return mConfig.loadString(mSection, key, def);
@@ -63,6 +68,11 @@ public:
         char    buf[maxStringSize];
         GetPrivateProfileStringA(section, name, def.c_str(), &buf[0], sizeof(buf), mFileName.c_str());
         return std::string(buf);
+    }
+
+    bool save(const char * section, const char * name, const std::string& value) const
+    {
+        return WritePrivateProfileString(section, name, value.c_str(), mFileName.c_str());
     }
 
     int loadInt(const char * section, const char * name, int def = 0) const
