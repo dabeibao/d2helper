@@ -133,13 +133,13 @@ private:
         int origId = D2Util::getRightSkillId();
 
         trace("%s: Start skill %d, orig %d\n", __FUNCTION__, mSkill.skillId, origId);
+        DefSubclassProc(origD2Hwnd, WM_KEYDOWN, mSkill.key, 0);
+        DefSubclassProc(origD2Hwnd, WM_KEYUP, mSkill.key, 0);
         if (origId == mSkill.skillId) {
             fcDbg(L"no change required orig %d, cur %d", origId, mSkill.skillId);
             return sendMouseDown();
         }
         fcDbg(L"Set Skill to %d cur %d", mSkill.skillId, origId);
-        DefSubclassProc(origD2Hwnd, WM_KEYDOWN, mSkill.key, 0);
-        DefSubclassProc(origD2Hwnd, WM_KEYUP, mSkill.key, 0);
         D2Util::setSkill(mSkill.skillId);
         mRetryCount = 0;
         next(&RunActor::checkSkill, 5);

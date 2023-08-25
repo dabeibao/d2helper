@@ -222,8 +222,13 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     if (!isInGame) {
         isInGame = true;
         Event::trigger(Event::GameStart);
-        D2ShowMap();
-        //WinTM::inst().onGameStart();
+        // static Timer delayTimer;
+        // if (delayTimer.cb == NULL) {
+        //     delayTimer.cb = [](Timer *) {
+        //         D2ShowMap();
+        //     };
+        // }
+        // WinTM::inst().addTimer(&delayTimer, 500);
     }
 
     bool        blocked = false;
