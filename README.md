@@ -32,3 +32,14 @@ enable = true
 ;;;        toggleKey = CTRL+ALT+G   ;;; 同时按下CTRL ALT和G时切换
 toggleKey = CTRL+G
 ```
+
+## 注册表沙盒
+
+``` ini
+[helper.regsim]
+;;; 注册表沙盒。注册表读写将定向到dll目录的D2RegSim.ini。
+
+;;; 开启/关闭。默认开启
+enable = true
+```
+
