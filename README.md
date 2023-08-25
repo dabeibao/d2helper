@@ -37,7 +37,10 @@ toggleKey = CTRL+G
 
 ``` ini
 [helper.regsim]
-;;; 注册表沙盒。注册表读写将定向到dll目录的D2RegSim.ini。
+;;; 注册表沙盒。注册表读写将定向到dll目录的D2RegSimPre.ini和D2RegSim.ini。
+;;;   其中D2RegSimPre.ini为预设值的配置，不会被修改。可用于保存战网IP之类的
+;;; 注册表格式参见
+;;;   https://github.com/dabeibao/d2helper/blob/main/examples/D2RegSim.ini
 
 ;;; 开启/关闭。默认开启
 enable = true

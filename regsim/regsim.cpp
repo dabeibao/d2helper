@@ -7,6 +7,7 @@
 #include "loader.hpp"
 #include "cConfigLoader.hpp"
 
+#define REG_SIM_PRESET  "D2RegSimPre.ini"
 #define REG_SIM_FILE    "D2RegSim.ini"
 
 extern "C" {
@@ -75,6 +76,22 @@ static bool isBlzKeyW(HKEY hKey, LPCWSTR subKey)
     }
     if (_wcsicmp(subKey, BLZ_KEY_W) != 0) {
         return false;
+    }
+
+    return true;
+}
+
+static bool isAllowQueryRedirect(const char * key)
+{
+    static const char * notAllowKeys[] = {
+        "InstallPath", "Save Path",
+        "Preferred Realm",
+    };
+
+    for (auto sk: notAllowKeys) {
+        if (_stricmp(sk, key) == 0) {
+            return false;
+        }
     }
 
     return true;
@@ -200,7 +217,7 @@ LONG WINAPI Mine_RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReser
         rv = gRegIni->load(lpValueName, lpData, size, &outSize, lpType);
         log_verbose("RegQueryValueExA from BLZ rv %lu key %p value %s type %lu data %lu(%lu)\n",
                   rv, hKey, lpValueName, getInt(lpType), getInt(lpcbData), outSize);
-        if (rv != ERROR_FILE_NOT_FOUND) {
+        if (rv != ERROR_FILE_NOT_FOUND || !isAllowQueryRedirect(lpValueName)) {
             if (lpcbData != NULL) {
                 *lpcbData = outSize;
             }
@@ -256,29 +273,6 @@ static void detachDetours()
 
 static bool regsimIsInited;
 
-class d2RegGuesser: public RegIni::Guess {
-public:
-    virtual DWORD       guess(const char * key) override
-    {
-        static const char * strKeys[] = {
-            "Aux Battle.net", "BNETIP", "CmdLine", "InstallPath",
-            "Last BNet", "Preferred Realm", "Save Path",
-        };
-
-        if (key == NULL) {
-            return REG_NONE;
-        }
-        for (auto sk: strKeys) {
-            if (_stricmp(sk, key) == 0) {
-                return REG_SZ;
-            }
-        }
-        log_verbose("Key %s not found\n");
-
-        return REG_NONE;
-    }
-};
-
 extern "C" int RegsimInit()
 {
     if (regsimIsInited) {
@@ -293,15 +287,16 @@ extern "C" int RegsimInit()
     }
 
     char        path[512];
+    char        prePath[512 + 32];
     char        fullName[512 + 32];
 
     log_trace("Regsim load\n");
     regsimIsInited = true;
     getAppDirectory(path, sizeof(path));
+    snprintf(prePath, sizeof(prePath), "%s\\%s", path, REG_SIM_PRESET);
     snprintf(fullName, sizeof(fullName), "%s\\%s", path, REG_SIM_FILE);
 
-    static d2RegGuesser guesser;
-    gRegIni = new RegIni(fullName, &guesser);
+    gRegIni = new RegIni(prePath, fullName);
     attachDetours();
 
     return 0;

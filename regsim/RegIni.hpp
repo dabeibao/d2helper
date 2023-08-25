@@ -10,14 +10,9 @@
 
 class RegIni {
 public:
-    class Guess {
-    public:
-        virtual DWORD   guess(const char *) = 0;
-    };
-
-    RegIni(const char * fileName, Guess *guesser = nullptr): mConfig(fileName), mGuesser(guesser)
+    RegIni(const char * preName, const char * customName):
+        mPreConfig(preName), mConfig(customName)
     {
-
     }
 
     LONG        save(const char * key, DWORD type, const BYTE * data, DWORD size)
@@ -50,6 +45,15 @@ public:
         return ERROR_FILE_INVALID;
     }
 
+    std::string loadConfig(const char * key)
+    {
+        auto data = mConfig.loadString(SECTION_NAME, key);
+        if (!data.empty()) {
+            return data;
+        }
+        return mPreConfig.loadString(SECTION_NAME, key);
+    }
+
     #define SET_VALUE(p, v)     if (p != NULL) *p = v
 
     LONG        load(const char * key, LPBYTE data, DWORD size, DWORD *outSize, LPDWORD type)
@@ -60,8 +64,7 @@ public:
             return ERROR_FILE_NOT_FOUND;
         }
 
-        auto section = mConfig.section(SECTION_NAME);
-        auto line = section.loadString(key);
+        auto line = loadConfig(key);
         std::string out;
         DWORD loadType;
         bool ok = parseIniString(key, line, out, &loadType);
@@ -113,16 +116,13 @@ private:
     {
         char buf[32];
 
-        snprintf(buf, sizeof(buf), "4,%lu", value);
+        snprintf(buf, sizeof(buf), "dword:%lu", value);
         return std::string(buf);
     }
 
     static std::string stringToIniString(const char * value)
     {
-        char buf[1024];
-
-        snprintf(buf, sizeof(buf), "1,%s", value);
-        return std::string(buf);
+        return std::string(value);
     }
 
     bool parseIniString(const char * key, const std::string& value, std::string& out, DWORD * type)
@@ -132,30 +132,20 @@ private:
             return false;
         }
 
-        auto pos = value.find(',');
-        if (pos == value.npos) {
-            out = value;
-            *type = guessType(key);
-        } else {
-            auto keyStr = value.substr(0, pos);
-            *type = std::stoi(keyStr);
-            out = value.substr(pos + 1);
+        const char * dwordPrefix = "dword:";
+
+        if (_strnicmp(dwordPrefix, value.c_str(), strlen(dwordPrefix)) == 0) {
+            *type = REG_DWORD;
+            out = value.substr(strlen(dwordPrefix));
+            return true;
         }
-        if (*type == REG_NONE) {
-            return false;
-        }
+
+        *type = REG_SZ;
+        out = value;
         return true;
     }
 
-    DWORD       guessType(const char * key)
-    {
-        if (mGuesser) {
-            return mGuesser->guess(key);
-        }
-        return REG_NONE;
-    }
-
 private:
+    Config      mPreConfig;
     Config      mConfig;
-    Guess *     mGuesser;
 };
