@@ -3,6 +3,8 @@
 #include <windows.h>
 #include <string>
 #include <string.h>
+#include <vector>
+#include "strutils.hpp"
 
 class Config {
     static constexpr int        maxStringSize = 128;
@@ -38,6 +40,11 @@ public:
         bool loadBool(const char * key, bool def = false) const
         {
             return mConfig.loadBool(mSection, key, def);
+        }
+
+        void loadList(const char * key, std::vector<std::string> & list) const
+        {
+            mConfig.loadList(mSection, key, list);
         }
 
     private:
@@ -112,6 +119,15 @@ public:
         }
 
         return def;
+    }
+
+    void loadList(const char * section, const char * name, std::vector<std::string> & list) const
+    {
+        auto str = loadString(section, name, "");
+        helper::split(str, ',', list);
+        for (auto& s: list) {
+            helper::trim(s);
+        }
     }
 
 private:

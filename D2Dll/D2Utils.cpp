@@ -50,7 +50,7 @@ int D2Util::getKeyFunc(BYTE key)
     return -1;
 }
 
-int D2Util::getSkillId(int func)
+int D2Util::getSkillId(int func, bool * isLeft)
 {
     auto        table = FUNC_SKILL_TABLE;
     DWORD       id = table[func].skillId;
@@ -58,6 +58,10 @@ int D2Util::getSkillId(int func)
     if (id >= 0xffff) {
         return -1;
     }
+
+    auto        handTable = SKILL_HAND_TABLE;
+    *isLeft = handTable[func].isLeft != 0;
+
     return (int)id;
 }
 

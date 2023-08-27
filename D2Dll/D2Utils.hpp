@@ -56,6 +56,15 @@ inline bool uiIsSet(int ui)
     return UI_STATUS_TABLE[ui] != 0;
 }
 
+inline int getLeftSkillId()
+{
+    if (PLAYER && PLAYER->pSkill && PLAYER->pSkill->pLeftSkill && PLAYER->pSkill->pLeftSkill->pSkillInfo) {
+        return (int)PLAYER->pSkill->pLeftSkill->pSkillInfo->wSkillId;
+    }
+
+    return -1;
+}
+
 inline int getRightSkillId()
 {
     if (PLAYER && PLAYER->pSkill && PLAYER->pSkill->pRightSkill && PLAYER->pSkill->pRightSkill->pSkillInfo) {
@@ -71,7 +80,20 @@ inline BYTE getWeaponSwitch()
 }
 
 int getKeyFunc(BYTE key);
-int getSkillId(int func);
+
+inline int getHoldKey()
+{
+    for (auto i = 0; i < 2; i += 1) {
+        auto  keyMap = &KEY_TABLE[D2_KEY_HOLD_OFFSET + i];
+        if (keyMap->key != 0xffff) {
+            return keyMap->key;
+        }
+    }
+
+    return -1;
+}
+
+int getSkillId(int func, bool * isLeft);
 void setSkill(WORD skillId, bool left = false);
 void castSkill(int x, int y, bool left = false);
 void screenToAutoMap(const POINT * screenPos, POINT * mapPos);

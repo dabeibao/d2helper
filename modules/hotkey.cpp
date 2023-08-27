@@ -6,34 +6,9 @@
 #include <unordered_map>
 #include "hotkey.hpp"
 #include "log.h"
+#include "strutils.hpp"
 
-static void split(const std::string& s, char delim, std::vector<std::string>& list)
-{
-    std::stringstream   ss(s);
-    std::string         item;
-    while (std::getline(ss, item, delim)) {
-        list.push_back(std::move(item));
-    }
-}
-// trim from start (in place)
-static inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-}
-
-// trim from end (in place)
-static inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string &s) {
-    rtrim(s);
-    ltrim(s);
-}
+using namespace helper;
 
 static bool getFunctionKey(const std::string& s, uint32_t * func)
 {
@@ -125,7 +100,7 @@ static uint32_t stringToKey(std::string& s)
     }
 
     if (s.starts_with("0x")) {
-        return (uint32_t)std::stoul(s, nullptr, 0);
+        return (uint32_t)toInt(s);
     }
 
     if (s.size() >= 2) {

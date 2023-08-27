@@ -39,6 +39,7 @@
 
 #define KEY_TABLE (p_D2KeyTable)
 #define FUNC_SKILL_TABLE (p_D2FuncSkillTable)
+#define SKILL_HAND_TABLE (p_D2SkillHandTable)
 
 #define UI_STATUS_TABLE (p_D2UiStatusTable)
 

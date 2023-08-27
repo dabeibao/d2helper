@@ -44,9 +44,19 @@ static void log_vtrace(const char *fmt, va_list ap)
 
     GetLocalTime(&local_time);
 
-    fprintf(log_file, "%02d:%02d:%02d.%03d ",
-            local_time.wHour, local_time.wMinute, local_time.wSecond, local_time.wMilliseconds);
-    vfprintf(log_file, fmt, ap);
+    char buf[256];
+    int n = vsnprintf(buf, sizeof(buf), fmt, ap);
+    if (n <= 0 || n >= sizeof(buf)) {
+        buf[sizeof(buf) - 1] = '\0';
+    } else {
+        if (buf[n - 1] == '\n') {
+            buf[n - 1] = '\0';
+        }
+    }
+
+    fprintf(log_file, "%02d:%02d:%02d.%03d %s\n",
+            local_time.wHour, local_time.wMinute, local_time.wSecond, local_time.wMilliseconds,
+            buf);
     log_flush();
 }
 

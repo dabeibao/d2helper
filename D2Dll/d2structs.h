@@ -1103,11 +1103,18 @@ typedef struct {
     DWORD       skillId;
 } D2_FUNC_TO_SKILL_TABLE;
 
+typedef struct {
+    BYTE        isLeft;
+    BYTE        res0[3];
+} D2_SKILL_HAND_TABLE;
+
 #define D2_KEY_TABLE_FIRST_FUNC         (28)
 #define D2_KEY_TABLE_FIRST_FUNC_NUM     (14)
 #define D2_KEY_TABLE_SECOND_FUNC        (90)
 #define D2_KEY_TABLE_SECOND_FUNC_NUM    (18)
 #define D2_KEY_FUNC_NUM                 (16)
+
+#define D2_KEY_HOLD_OFFSET              (70)
 
 #pragma pack(pop)
 

@@ -31,7 +31,15 @@ enable = true
 ;;;   例如: toggleKey = CTRL        ;;; 按CTRL时切换
 ;;;        toggleKey = CTRL+ALT+G   ;;; 同时按下CTRL ALT和G时切换
 toggleKey = CTRL+G
+
+;;; 左键技能是否按住Shift键(类似左键TP)
+;;; 格式 leftHold = id0,id1,id2,id3.
+;;; 默认TP会按住Shift, leftHold = -1 可关闭.
+;;;
+;;;    例如：多排箭和TP 按住shift键
+leftHold = 12,54
 ```
+技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
 
 ## 注册表沙盒
 
@@ -39,10 +47,10 @@ toggleKey = CTRL+G
 [helper.regsim]
 ;;; 注册表沙盒。注册表读写将定向到dll目录的D2RegSimPre.ini和D2RegSim.ini。
 ;;;   其中D2RegSimPre.ini为预设值的配置，不会被修改。可用于保存战网IP之类的
-;;; 注册表格式参见
-;;;   https://github.com/dabeibao/d2helper/blob/main/examples/D2RegSim.ini
 
 ;;; 开启/关闭。默认开启
 enable = true
 ```
+注册表格式参见
+   [D2RegSim.ini](https://github.com/dabeibao/d2helper/blob/main/examples/D2RegSim.ini)
 
