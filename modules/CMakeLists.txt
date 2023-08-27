@@ -1,4 +1,4 @@
-add_library(modules STATIC
+add_library(modules OBJECT
     d2hmodule.cpp
     Event.cpp Timer.cpp WinTM.cpp
     KeyModule.cpp hotkey.cpp

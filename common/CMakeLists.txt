@@ -1,4 +1,4 @@
-add_library(common STATIC
+add_library(common OBJECT
     log.cpp
     HelpFunc.cpp
     loader.cpp
