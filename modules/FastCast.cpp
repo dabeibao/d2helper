@@ -137,10 +137,6 @@ private:
         int origId = getSkillId();
         trace("%s: Start skill %d, orig %d\n", __FUNCTION__, mSkill.skillId, origId);
 
-        if (origId == mSkill.skillId) {
-            fcDbg(L"no change required orig %d, cur %d", origId, mSkill.skillId);
-            return sendMouseDown();
-        }
         fcDbg(L"Set Skill to %d cur %d", mSkill.skillId, origId);
         D2Util::setSkill(mSkill.skillId, isLeft());
         next(&RunTask::preCheck, 5);
@@ -148,6 +144,7 @@ private:
 
     void                preCheck()
     {
+        trace("%s:start wait time", __FUNCTION__);
         mTime.start();
         checkSkill();
     }
