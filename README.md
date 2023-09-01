@@ -32,12 +32,12 @@ enable = true
 ;;;        toggleKey = CTRL+ALT+G   ;;; 同时按下CTRL ALT和G时切换
 toggleKey = CTRL+G
 
-;;; 左键技能是否按住Shift键(类似左键TP)
-;;; 格式 leftHold = id0,id1,id2,id3.
-;;; 默认TP会按住Shift, leftHold = -1 可关闭.
-;;;
-;;;    例如：多排箭和TP 按住shift键
-leftHold = 12,54
+
+;; attackSkills = xxx
+;;     左手使用这些技能时将不按shift键
+;;     前面加-号表示将技能移除出列表
+;;     例如:  attackSkills = -0  普通攻击将会原地攻击
+;;;attackSkills = 
 ```
 技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
 
@@ -54,3 +54,13 @@ enable = true
 注册表格式参见
    [D2RegSim.ini](https://github.com/dabeibao/d2helper/blob/main/examples/D2RegSim.ini)
 
+## 加载d2hack.script
+
+``` ini
+[helper.hackscript]
+;;; 开启/关闭。默认关闭
+enable = false
+
+;;; 加载的脚本名字。默认d2hack.script
+;; file = d2hack.script
+```

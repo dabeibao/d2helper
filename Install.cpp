@@ -176,7 +176,7 @@ BOOL Install()
 {
     config_t    config;
 
-    log_init();
+    log_init("d2helper.log");
     if (!loadConfig(&config)) {
         return FALSE;
     }

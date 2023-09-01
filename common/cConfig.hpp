@@ -7,7 +7,7 @@
 #include "strutils.hpp"
 
 class Config {
-    static constexpr int        maxStringSize = 128;
+    static constexpr int        maxStringSize = 4096;
 public:
     class Section
     {

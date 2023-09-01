@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <vector>
+#include <string>
 #include "HelpFunc.h"
 #include "log.h"
 
@@ -34,10 +36,10 @@ DWORD VirtualProtect(DWORD pAddress, DWORD len, DWORD prot)
 }
 
 
-void WriteLocalBYTES(DWORD pAddress, void *buf, int len)
+void WriteLocalBYTES(DWORD pAddress, const void *buf, int len)
 {
 	DWORD oldprot = VirtualProtect(pAddress, len, PAGE_EXECUTE_READWRITE);
-	WriteProcessMemory(GetCurrentProcess(), (void *)pAddress, buf, len, 0);
+	WriteProcessMemory(GetCurrentProcess(), (void *)(uintptr_t)pAddress, buf, len, 0);
 	VirtualProtect(pAddress, len, oldprot);
 }
 
@@ -69,7 +71,7 @@ void InterceptLocalCode2(BYTE inst, DWORD pOldCode, DWORD pNewCode, int len)
 	*(DWORD *)(buf1+1) = pNewCode;
 	memset(buf1+5, INST_NOP, len-5);
 	WriteLocalBYTES(pOldCode, buf1, len);
-	delete buf1;
+	delete[] buf1;
 }
 
 
@@ -98,6 +100,19 @@ void PatchFILL(DWORD addr, DWORD param, DWORD len)
 void PatchVALUE(DWORD addr, DWORD param, DWORD len)
 {
 	WriteLocalBYTES(addr, &param, len);
+}
+
+int PatchCompare(DWORD addr, const uint8_t * old, int oldSize, const uint8_t * newCode, int newSize)
+{
+    std::vector<uint8_t> oldCode(oldSize);
+
+    ReadLocalBYTES(addr, oldCode.data(), oldSize);
+    if (memcmp(oldCode.data(), old, oldSize) != 0) {
+        return -1;
+    }
+    WriteLocalBYTES(addr, newCode, newSize);
+
+    return 0;
 }
 
 static bool doHook(BYTE* src, BYTE* dst, int len)
@@ -417,7 +432,7 @@ int MyMultiByteToWideChar(
 }
 
 // GB2312 => GBK
-// 中华人民共和国 --> 中華人民共和國
+// Simplified -> Traditional
 void GB2GBK(char *szBuf)
 {
 	if(!strcmp(szBuf, ""))return;

@@ -3,6 +3,7 @@ add_library(modules OBJECT
     Event.cpp Timer.cpp WinTM.cpp
     KeyModule.cpp hotkey.cpp
     FastCast.cpp
+    hackscript.cpp hackscriptImpl.cpp
 )
 
 target_include_directories(modules INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

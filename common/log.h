@@ -11,7 +11,7 @@ enum {
 
 extern int log_level;
 
-int log_init(void);
+int log_init(const char * name);
 void log_release(void);
 void log_trace_level(int level, const char * fmt, ...);
 void log_set_verbose();

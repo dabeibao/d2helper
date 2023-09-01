@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <stdio.h>
 #include "d2ptrs.h"
 #include "D2Utils.hpp"
 #include "Define.h"
@@ -136,6 +137,9 @@ bool D2Util::isGameScreen()
         return false;
     }
     if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
+        return false;
+    }
+    if (D2Util::uiIsSet(UIVAR_CFGCTRLS)) {
         return false;
     }
     if (D2Util::uiIsSet(UIVAR_NPCTRADE)) {

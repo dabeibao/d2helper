@@ -3,17 +3,15 @@
 #include <windows.h>
 #include "log.h"
 
-#define LOG_NAME        "d2helper.log"
-
 static FILE * log_file = NULL;
 static int log_level = LOG_LEVEL_INFO;
 
-int log_init(void)
+int log_init(const char * name)
 {
-    FILE *      fp = fopen(LOG_NAME, "w");
+    FILE *      fp = fopen(name, "w");
 
     if (fp == NULL) {
-        fprintf(stderr, "Failed to open %s for write\n", LOG_NAME);
+        fprintf(stderr, "Failed to open %s for write\n", name);
         return -1;
     }
 

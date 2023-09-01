@@ -2,6 +2,7 @@
 #define HELPFUNC_H
 
 #include <windows.h>
+#include <stdint.h>
 
 #define INST_NOP 0x90
 #define INST_CALL 0xe8
@@ -13,7 +14,7 @@ extern char szPluginPath[MAX_PATH];
 DWORD GetDllOffset(const char *dll, int offset);
 DWORD GetDllOffset(int num);
 DWORD ReadLocalDWORD(DWORD pAddress);
-void WriteLocalBYTES(DWORD pAddress, void *buf, int len);
+void WriteLocalBYTES(DWORD pAddress, const void *buf, int len);
 void ReadLocalBYTES(DWORD pAddress, void *buf, int len);
 
 
@@ -46,6 +47,8 @@ void PatchJMP(DWORD addr, DWORD param, DWORD len);
 void PatchFILL(DWORD addr, DWORD param, DWORD len);
 void PatchVALUE(DWORD addr, DWORD param, DWORD len);
 void * PatchDetour(DWORD addr, DWORD param, DWORD len);
+int PatchCompare(DWORD addr, const uint8_t * old, int oldSize, const uint8_t * newCode, int newSize);;
+
 int MyMultiByteToWideChar(
 						UINT CodePage,         // code page
 						DWORD dwFlags,         // character-type options

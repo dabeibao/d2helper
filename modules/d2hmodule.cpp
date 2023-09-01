@@ -4,10 +4,12 @@
 
 extern D2HModule keyModule;
 extern D2HModule fastCastModule;
+extern D2HModule hackScriptModule;
 
 static D2HModule * modules[] = {
     &keyModule,
     &fastCastModule,
+    &hackScriptModule,
 };
 
 static bool isModuleInited;
@@ -15,6 +17,8 @@ static bool isModuleInited;
 int module_init()
 {
     int         i;
+
+    log_trace("Module init entry");
     for (i = 0; i < ARRAY_SIZE(modules); i += 1) {
         log_trace("Init module %s\n", modules[i]->name);
         log_flush();

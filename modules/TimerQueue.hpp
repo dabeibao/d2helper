@@ -31,7 +31,9 @@ public:
 
     void clear()
     {
-        mTimers.resize(Heap0);
+        while (!isEmpty()) {
+            pop();
+        }
     }
 
     Timer * first() const

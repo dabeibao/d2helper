@@ -34,16 +34,21 @@ static inline void trim(std::string &s) {
     ltrim(s);
 }
 
-static inline int toInt(const std::string& s, bool * ok = nullptr, int base = 0)
+static inline int toInt(const char *s, bool * ok = nullptr, int base = 0)
 {
     char *      errPtr;
-    long        v = std::strtol(s.c_str(), &errPtr, base);
+    long        v = std::strtol(s, &errPtr, base);
 
     if (ok != nullptr) {
         *ok = *errPtr == '\0';
     }
 
     return (int)v;
+}
+
+static inline int toInt(const std::string& s, bool * ok = nullptr, int base = 0)
+{
+    return toInt(s.c_str(), ok, base);
 }
 
 }

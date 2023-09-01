@@ -39,7 +39,27 @@ struct SkillTime {
 static bool fastCastDebug;
 static bool fastCastEnabled;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
-static std::set<int> fastCastLeftHoldSkills;
+
+static std::set<int> fastCastAttackSkills = {
+    0,
+    // amazon
+    10, 14, 19, 24, 30, 34,
+
+    // sor
+
+    // nec
+
+    // pal
+    96, 97, 106, 107,
+
+    // Bar
+    131, 142, 126, 133, 139, 144, 147, 151, 152,
+
+    // Dru
+
+    // Asn
+    254, 255, 260, 259, 265, 270, 269, 247, 275, 280,
+};
 
 static WNDPROC getOrigProc(HWND hwnd)
 {
@@ -186,7 +206,8 @@ private:
         if (isLeft()) {
             int         holdKey = -1;
 
-            if (fastCastLeftHoldSkills.find(mSkill.skillId) != fastCastLeftHoldSkills.end()) {
+            // It is not an attack skill
+            if (fastCastAttackSkills.find(mSkill.skillId) == fastCastAttackSkills.end()) {
                 holdKey = D2Util::getHoldKey();
                 fcDbg(L"Hold key: %d", holdKey);
             }
@@ -621,19 +642,23 @@ static void fastCastLoadConfig()
     auto keyString = section.loadString("toggleKey");
     fastCastToggleKey = Hotkey::parseKey(keyString);
 
-    std::vector<std::string>    holdSkills;
-    section.loadList("leftHold", holdSkills);
-    log_verbose("left hold skills %zu", holdSkills.size());
-    if (holdSkills.empty()) {
-        // Enabl TP Hold by default
-        fastCastLeftHoldSkills.insert(54);
-    }
-    for (auto& s: holdSkills) {
+    std::vector<std::string>    attackSkills;
+    section.loadList("attackSkills", attackSkills);
+    log_verbose("attack skills %zu", attackSkills.size());
+    for (auto& s: attackSkills) {
         bool ok;
         int skillId = helper::toInt(s, &ok);
         log_verbose("skill %s -> %d, ok %u", s.c_str(), skillId, ok);
-        if (ok && skillId > 0) {
-            fastCastLeftHoldSkills.insert(skillId);
+        if (!ok) {
+            continue;
+        }
+        if (skillId < 0) {
+            skillId = -skillId;
+        }
+        if (s.starts_with("-")) {
+            fastCastAttackSkills.erase(skillId);
+        } else {
+            fastCastAttackSkills.insert(skillId);
         }
     }
 
