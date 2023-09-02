@@ -512,10 +512,6 @@ private:
             return Wait;
         }
 
-        if (!mPendingSkills.empty()) {
-            return startNextSkill();
-        }
-
         mState = Restore;
         return Continue;
     }
