@@ -43,12 +43,6 @@ struct HackPatcher {
     }
 };
 
-
-static bool hackScriptEnabled;
-static std::string hackScriptFile;
-
-
-
 static char * skipSpace(char * input)
 {
     while (isspace(*input)) {
@@ -278,3 +272,28 @@ void hackScriptRunPatch(const std::string& file)
     }
 }
 
+#ifdef BUILD_HACKSCRIPT
+
+BOOL APIENTRY DllMain( HMODULE hModule,
+                       DWORD  ul_reason_for_call,
+                       LPVOID lpReserved)
+{
+    switch (ul_reason_for_call) {
+    case DLL_PROCESS_ATTACH:
+        hackScriptRunPatch("d2hack.script");
+        return TRUE;
+    case DLL_THREAD_ATTACH:
+        break;
+    case DLL_THREAD_DETACH:
+        break;
+    case DLL_PROCESS_DETACH:
+        break;
+    }
+    return TRUE;
+}
+
+extern "C" __declspec(dllexport) PVOID __stdcall QueryInterface()
+{
+    return NULL;
+}
+#endif

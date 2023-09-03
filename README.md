@@ -7,10 +7,10 @@
 ``` ini
 [helper.config]
 ;;; 打开调试信息
-debug = 1
+debug = 0
 
 ;;; 更多打印信息
-verbose = 1
+verbose = 0
 ```
 
 ## 快捷键合成
