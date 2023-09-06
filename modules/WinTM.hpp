@@ -35,7 +35,11 @@ private:
     WinTM()
     {
         mIsRunning = false;
-        mLastIdle = GetTickCount64();
+        mLastIdle = 0.0;
+
+        LARGE_INTEGER freq;
+        QueryPerformanceFrequency(&freq);
+        mFreq = (double)freq.QuadPart;
 
         Event::add(Event::GameStart, [this](Event::Type) {
             onGameStart();
@@ -63,5 +67,6 @@ private:
 private:
     bool        mIsRunning;
     TimerQueue  mQueue;
-    uint64_t    mLastIdle;
+    double      mLastIdle;
+    double      mFreq;
 };

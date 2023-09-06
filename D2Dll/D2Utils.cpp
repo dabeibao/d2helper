@@ -79,6 +79,17 @@ void D2Util::setSkill(WORD skillId, bool left)
 
 }
 
+void D2Util::setAndUpdateSkill(WORD skillId, bool isLeft)
+{
+    if (isLeft) {
+        D2SetLeftActiveSkill(PLAYER, skillId, 0xffffffff);
+    } else {
+        D2SetRightActiveSkill(PLAYER, skillId, 0xffffffff);
+    }
+
+    D2Util::setSkill(skillId, isLeft);
+}
+
 void D2Util::castSkill(int x, int y, bool left)
 {
     BYTE        packet[5];

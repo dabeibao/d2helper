@@ -55,7 +55,7 @@ protected:
 
     virtual void        start() = 0;
 
-    void                stop()
+    virtual void        stop()
     {
         mState = nullptr;
         mTimer.stop();

@@ -95,6 +95,7 @@ inline int getHoldKey()
 
 int getSkillId(int func, bool * isLeft);
 void setSkill(WORD skillId, bool left = false);
+void setAndUpdateSkill(WORD skillId, bool isLeft);
 void castSkill(int x, int y, bool left = false);
 void screenToAutoMap(const POINT * screenPos, POINT * mapPos);
 

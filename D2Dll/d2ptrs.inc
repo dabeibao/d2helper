@@ -149,6 +149,8 @@ D2FUNCPTR2(D2COMMON, 0x6FD84B80, 0x6FDC7670,  GetUnitPosX,          DWORD __stdc
 D2FUNCPTR2(D2COMMON, 0x6FD84BB0, 0x6FDC76A0,  GetUnitPosY,          DWORD __stdcall, (DynamicPath *pPath) ) //(Players, Monsters, Missiles)
 
 D2FUNCPTR2(D2COMMON, 0x6FDAE810, 0x6FD5CA80,  GetMinExpToLevel,     int __stdcall, (DWORD dwCharClass, DWORD dwLevel))
+D2FUNCPTR(D2COMMON, -10546, SetLeftActiveSkill, void __stdcall, (UnitAny *, int nSkillId, DWORD ownerGUID))
+D2FUNCPTR(D2COMMON, -10978, SetRightActiveSkill, void __stdcall, (UnitAny *, int nSkillId, DWORD ownerGUID))
 
 D2VARPTR2(D2COMMON,  0x6FDEFBA0, 0x6FDF4CBC, WeaponsTxts,         int)
 D2VARPTR2(D2COMMON,  0x6FDEFBA8, 0xA4CC4+DLLBASE_D2COMMON, ArmorTxts,           int)

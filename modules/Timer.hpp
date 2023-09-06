@@ -5,7 +5,7 @@
 
 struct Timer {
     using Callback = std::function<void (Timer *)>;
-    Timer(uint64_t aExpires = 0): expires(aExpires), _index(0)
+    Timer(uint64_t aExpires = 0): expires((double)aExpires), _index(0)
     {
     }
 
@@ -23,7 +23,7 @@ struct Timer {
 
     Callback    cb;
     void *      data;
-    uint64_t    expires;
+    double      expires;
 
     friend class TimerQueue;
 

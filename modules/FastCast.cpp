@@ -2,6 +2,7 @@
 #include <commctrl.h>
 #include <list>
 #include <set>
+#include "HelpFunc.h"
 #include "Define.h"
 #include "d2h_module.hpp"
 #include "d2ptrs.h"
@@ -34,7 +35,7 @@ struct SkillTime {
 };
 
 #define fcDbg(fmt, ...)         do { if (fastCastDebug) D2Util::showInfo(fmt, ##__VA_ARGS__); } while(0)
-#define trace(fmt, ...)         do { if (fastCastDebug) log_trace(fmt, ##__VA_ARGS__); log_flush(); } while (0)
+#define trace(fmt, ...)         do { if (fastCastDebug) log_trace("%s:" fmt, __FUNCTION__, ##__VA_ARGS__); log_flush(); } while (0)
 
 static bool fastCastDebug;
 static bool fastCastEnabled;
@@ -151,20 +152,23 @@ private:
 
     virtual void        start() override
     {
+        int origId = getSkillId();
+        trace("Start skill %d, orig %d\n", mSkill.skillId, origId);
+        mOrigSkill = origId;
+
+        // For the map
         DefSubclassProc(origD2Hwnd, WM_KEYDOWN, mSkill.key, 0);
         DefSubclassProc(origD2Hwnd, WM_KEYUP, mSkill.key, 0);
 
-        int origId = getSkillId();
-        trace("%s: Start skill %d, orig %d\n", __FUNCTION__, mSkill.skillId, origId);
-
+        D2Util::setAndUpdateSkill(mSkill.skillId, isLeft());
         fcDbg(L"Set Skill to %d cur %d", mSkill.skillId, origId);
-        D2Util::setSkill(mSkill.skillId, isLeft());
-        next(&RunTask::preCheck, 5);
+        //next(&RunTask::preCheck, 5);
+        preCheck();
     }
 
     void                preCheck()
     {
-        trace("%s:start wait time", __FUNCTION__);
+        trace("start wait time");
         mTime.start();
         checkSkill();
     }
@@ -177,16 +181,16 @@ private:
 
         int skillId = getSkillId();
 
-        trace("%s: wait skill %d, cur %d\n", __FUNCTION__, mSkill.skillId, skillId);
+        trace("wait skill %d, cur %d\n", mSkill.skillId, skillId);
         if (skillId != mSkill.skillId) {
             if (mTime.elapsed() >= 250) {
                 log_verbose("Failed to set skill id to %d, cur %d\n", mSkill.skillId, skillId);
                 return done();
             }
-            return next(&RunTask::checkSkill, 5);
+            return next(&RunTask::checkSkill, 1);
         }
         fcDbg(L"Skill %d set", mSkill.skillId);
-        trace("%s: wait skill %d done\n", __FUNCTION__, mSkill.skillId);
+        trace("wait skill %d done\n", mSkill.skillId);
         //next(&RunActor::sendMouseDown, 0);
         sendMouseDown();
     }
@@ -200,7 +204,7 @@ private:
         POINT screenPos = { MOUSE_POS->x, MOUSE_POS->y};
         mCurrentPos = screenPos;
         //D2Util::screenToAutoMap(&screenPos, &mCurrentPos);
-        trace("%s: send mouse event skill %d cur %d\n", __FUNCTION__,
+        trace("send mouse event skill %d cur %d\n",
               mSkill.skillId, getSkillId());
         DWORD pos = ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16);
         if (isLeft()) {
@@ -227,15 +231,7 @@ private:
             mySendMessage(origD2Hwnd, WM_RBUTTONDOWN, MK_RBUTTON, pos);
             mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON, pos);
         }
-        next(&RunTask::done, 10);
-    }
-
-    void sendMouseUp()
-    {
-        mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON,
-                      ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16));
-        next(&RunTask::done, 5);
-        trace("%s: skill %d mouse sent\n", __FUNCTION__, mSkill.skillId);
+        done();
     }
 
     void done()
@@ -247,12 +243,13 @@ private:
     ElapsedTime mTime;
     SkillTime   mSkill;
     POINT       mCurrentPos;
+    int         mOrigSkill;
 };
 
 class RestoreTask: public Task {
 public:
     RestoreTask(bool isLeft):
-        mIsLeft(isLeft), mOrigSkillId(-1), mCurrentSwitch(0xff)
+        mIsLeft(isLeft), mIsMonitoring(false), mOrigSkillId(-1), mCurrentSwitch(0xff)
     {
     }
 
@@ -280,7 +277,24 @@ public:
         run();
     }
 
+    void                onServerSkillUpdate(int nSkillId)
+    {
+        if (nSkillId == mOrigSkillId) {
+            return;
+        }
+        if (isRunning() && mIsMonitoring) {
+            mTimer.stop();
+            execute();
+        }
+    }
+
 private:
+    virtual void        stop() override
+    {
+        Task::stop();
+        mIsMonitoring = false;
+    }
+
     int                 getSkillId()
     {
         if (mIsLeft) {
@@ -292,7 +306,7 @@ private:
 
     void                setSkillId(int skillId)
     {
-        D2Util::setSkill(mOrigSkillId, mIsLeft);
+        D2Util::setAndUpdateSkill(skillId, mIsLeft);
     }
 
     bool                needAbort() const
@@ -308,6 +322,7 @@ private:
 
         // User is selecting a new skill or switching weapon
         if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
+            trace("Selecting CURR skill, abort\n");
             return true;
         }
 
@@ -321,12 +336,14 @@ private:
         if (needAbort()) {
             return finishRestore();
         }
-        next(&RestoreTask::startRestore, 50);
+        //next(&RestoreTask::startRestore, 50);
+        startRestore();
     }
 
     void                startRestore()
     {
         mTime.start();
+        mIsMonitoring = true;
         return sendRestore();
     }
 
@@ -336,9 +353,9 @@ private:
             return finishRestore();
         }
 
-        if (mTime.elapsed() >= 30000) {
-            // give up after 30 seconds
-            trace("Restore failed after 30 seconds");
+        if (mTime.elapsed() >= 60000) {
+            // give up after 60 seconds
+            trace("Restore failed after 60 seconds");
             return finishRestore();
         }
 
@@ -347,12 +364,13 @@ private:
             // Retry
             trace("sendRestore: set kill to %d cur %d\n", mOrigSkillId, getSkillId());
             setSkillId(mOrigSkillId);
-            next(&RestoreTask::sendRestore, 10);
+            next(&RestoreTask::sendRestore, 1);
             return;
         }
 
-        if (mIsLeft) {
-            return finishRestore();
+        if (mTime.elapsed() <= 3000) {
+            next(&RestoreTask::sendRestore, 10);
+            return;
         }
 
         // Fix SK triggered by hackmap
@@ -367,6 +385,7 @@ private:
 
     void                finishRestore()
     {
+        mIsMonitoring = false;
         mOrigSkillId = -1;
         done();
     }
@@ -378,6 +397,7 @@ private:
 
 private:
     bool                mIsLeft;
+    bool                mIsMonitoring;
     int                 mOrigSkillId;
     BYTE                mCurrentSwitch;
     ElapsedTime         mTime;
@@ -414,6 +434,16 @@ public:
         });
     }
 
+    void onServerSkillUpdate(bool isLeft, int nSkillId)
+    {
+        trace("Server set skill, left %d, skill %d\n", isLeft, nSkillId);
+        if (isLeft) {
+            mRestoreTasks[Left].onServerSkillUpdate(nSkillId);
+        } else {
+            mRestoreTasks[Right].onServerSkillUpdate(nSkillId);
+        }
+    }
+
     // call when game exit
     void  stop()
     {
@@ -448,7 +478,7 @@ private:
 
         mCrankCount += 1;
         if (cur != 0) {
-            trace("Crank: cur %d skip");
+            trace("Crank: cur %d skip", cur);
             return;
         }
 
@@ -521,14 +551,6 @@ private:
         // mRightRestore.start();
         // mLeftRestore.start();
         bool    needRestore = true;
-
-        // optimization
-        if (!mPendingSkills.empty()) {
-            auto & st = mPendingSkills.front();
-            if (st.isLeft == mCurrentSkill.isLeft) {
-                needRestore = false;
-            }
-        }
 
         if (needRestore) {
             restoreSkill();
@@ -664,6 +686,42 @@ static void fastCastLoadConfig()
     log_verbose("FastCast: enable: %d, debug %d\n", fastCastEnabled, fastCastDebug);
 }
 
+static void __stdcall setLeftActiveSkillHook(UnitAny * unit, int nSkillId, DWORD ownerGUID)
+{
+
+    D2SetLeftActiveSkill(unit, nSkillId, ownerGUID);
+    FastCastActor::inst().onServerSkillUpdate(true, nSkillId);
+}
+
+static void __stdcall setRightActiveSkillHook(UnitAny * unit, int nSkillId, DWORD ownerGUID)
+{
+    D2SetRightActiveSkill(unit, nSkillId, ownerGUID);
+    FastCastActor::inst().onServerSkillUpdate(false, nSkillId);
+}
+
+static void patch()
+{
+    // CPU Disasm
+    // Address   Hex dump          Command                                                              Comments
+    // 6FB5C7E0  |.  E8 29FDF5FF   CALL <JMP.&D2Common.#10546>                                          ; |\D2Common.#10546
+    // 6FB5C7E5  |.  5F            POP EDI                                                              ; |
+    // 6FB5C7E6  |.  5E            POP ESI                                                              ; |
+    // 6FB5C7E7  |.  C3            RETN                                                                 ; |
+    // base = D2Client(0x6FAB0000) offset = 0x6FB5C7E0 - base = 0xAC7E0
+    DWORD offset = GetDllOffset("D2CLIENT.DLL", 0x6FB5C7E0 - DLLBASE_D2CLIENT);
+    PatchCALL(offset, (DWORD)(uintptr_t)setLeftActiveSkillHook, 5);
+
+    // CPU Disasm
+    // Address   Hex dump          Command                                                              Comments
+    // 6FB5C7ED  |.  E8 3AFDF5FF   CALL <JMP.&D2Common.#10978>                                          ; \D2Common.#10978
+    // 6FB5C7F2  |>  5F            POP EDI
+    // 6FB5C7F3  |.  5E            POP ESI
+    // 6FB5C7F4  \.  C3            RETN
+    // base = D2Client(0x6FAB0000) offset = 0x6FB5C7ED - base = 0xAC7ED
+    offset = GetDllOffset("D2CLIENT.DLL", 0x6FB5C7ED - DLLBASE_D2CLIENT);
+    PatchCALL(offset, (DWORD)(uintptr_t)setRightActiveSkillHook, 5);
+}
+
 static int fastCastModuleInstall()
 {
     fastCastLoadConfig();
@@ -673,6 +731,8 @@ static int fastCastModuleInstall()
     if (fastCastToggleKey != Hotkey::Invalid) {
         keyRegisterHotkey(fastCastToggleKey, fastCastToggle, nullptr);
     }
+
+    patch();
 
     return 0;
 }

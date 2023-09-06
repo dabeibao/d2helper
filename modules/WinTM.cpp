@@ -36,7 +36,9 @@ void WinTM::onGameStop()
 
 bool WinTM::checkTimer()
 {
-    uint64_t now = GetTickCount64();
+    LARGE_INTEGER count;
+    QueryPerformanceCounter(&count);
+    double now = (double)count.QuadPart;
 
     while (!mQueue.isEmpty()) {
         auto t = mQueue.first();
@@ -50,7 +52,7 @@ bool WinTM::checkTimer()
     if (!mQueue.isEmpty()) {
         return true;
     }
-    if (now > mLastIdle + 3000) {
+    if (now > mLastIdle + 3 * mFreq) {
         stop();
         mLastIdle = now;
     }
@@ -59,7 +61,10 @@ bool WinTM::checkTimer()
 
 void WinTM::addTimer(Timer * timer, int timeout)
 {
-    timer->expires = GetTickCount64() + timeout;
+    LARGE_INTEGER now;
+    QueryPerformanceCounter(&now);
+    double count = mFreq * timeout / 1000.0;
+    timer->expires = now.QuadPart + count;
     mQueue.add(timer);
     if (!mIsRunning) {
         start();

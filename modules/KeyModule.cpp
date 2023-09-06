@@ -251,12 +251,12 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     default:
         break;
     }
+    WinTM::inst().checkTimer();
     if (blocked) {
         return 0;
     }
-    WinTM::inst().checkTimer();
-
-    return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    auto ret = DefSubclassProc(hWnd, uMsg, wParam, lParam);
+    return ret;
 }
 
 static void keyModuleOnLoad()
