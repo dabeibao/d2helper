@@ -651,6 +651,27 @@ static bool fastCastToggle(struct HotkeyConfig * config)
     return false;
 }
 
+static std::vector<int> fastCastLoadSkillList(Config::Section& section, const char * key)
+{
+    std::vector<std::string>    list;
+    std::vector<int>            skills;
+
+    section.loadList(key, list);
+    for (auto& s: list) {
+        bool ok;
+        int skillId = helper::toInt(s, &ok);
+        log_verbose("%s %s -> %d, ok %u", key, s.c_str(), skillId, ok);
+        if (!ok) {
+            continue;
+        }
+        if (skillId < 0) {
+            continue;
+        }
+        skills.push_back(skillId);
+    }
+    return skills;
+}
+
 static void fastCastLoadConfig()
 {
     auto section = CfgLoad::section("helper.fastcast");
@@ -660,25 +681,18 @@ static void fastCastLoadConfig()
     auto keyString = section.loadString("toggleKey");
     fastCastToggleKey = Hotkey::parseKey(keyString);
 
-    std::vector<std::string>    attackSkills;
-    section.loadList("attackSkills", attackSkills);
+    auto attackSkills = fastCastLoadSkillList(section, "attackSkills");
     log_verbose("attack skills %zu", attackSkills.size());
-    for (auto& s: attackSkills) {
-        bool ok;
-        int skillId = helper::toInt(s, &ok);
-        log_verbose("skill %s -> %d, ok %u", s.c_str(), skillId, ok);
-        if (!ok) {
-            continue;
-        }
-        if (skillId < 0) {
-            skillId = -skillId;
-        }
-        if (s.starts_with("-")) {
-            fastCastAttackSkills.erase(skillId);
-        } else {
-            fastCastAttackSkills.insert(skillId);
-        }
+    for (auto skillId: attackSkills) {
+        fastCastAttackSkills.insert(skillId);
     }
+
+    auto castSkills = fastCastLoadSkillList(section, "castSkills");
+    log_verbose("case skills %zu", castSkills.size());
+    for (auto skillId: castSkills) {
+        fastCastAttackSkills.erase(skillId);
+    }
+
 
     if (fastCastToggleKey != Hotkey::Invalid) {
         log_trace("FastCast: toggle key %s -> 0x%llx\n", keyString.c_str(), (unsigned long long)fastCastToggleKey);

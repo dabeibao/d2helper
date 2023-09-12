@@ -37,6 +37,12 @@ static inline void trim(std::string &s) {
 static inline int toInt(const char *s, bool * ok = nullptr, int base = 0)
 {
     char *      errPtr;
+
+    // No octal
+    if (s[0] == '0' && ('0' <= s[1]  && s[1] <= '9') && base == 0) {
+        base = 10;
+    }
+
     long        v = std::strtol(s, &errPtr, base);
 
     if (ok != nullptr) {

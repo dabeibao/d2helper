@@ -34,10 +34,14 @@ toggleKey = CTRL+G
 
 
 ;; attackSkills = xxx
-;;     左手使用这些技能时将不按shift键
-;;     前面加-号表示将技能移除出列表
-;;     例如:  attackSkills = -0  普通攻击将会原地攻击
-;;;attackSkills = 
+;;    左手释放时, 模拟近战攻击, 鼠标点空地人物会移动过去
+;;    例如:  attackSkills = 0
+;;;attackSkills =
+
+;; castSkills = xxx
+;;    左手释放时，模拟法术攻击，鼠标点空地人物保持不动（需要配置站立不动键)
+;;    例如: castSkils = 12
+;;;castSkills =
 ```
 技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
 
