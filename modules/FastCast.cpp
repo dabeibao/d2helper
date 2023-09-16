@@ -357,10 +357,17 @@ private:
 
     virtual void        start() override
     {
+        int     skillId = getSkillId();
         trace("Restore: left %u orig %d switch %d cur %d\n",
-              mIsLeft, mOrigSkillId, mCurrentSwitch, getSkillId());
+              mIsLeft, mOrigSkillId, mCurrentSwitch, skillId);
         if (needAbort()) {
             return finishRestore();
+        }
+        if (skillId == 107) {
+            // Special fix for charge
+            // Need keep current skill as charge to move smoothly.
+            next(&RestoreTask::startRestore, 600);
+            return;
         }
         //next(&RestoreTask::startRestore, 50);
         startRestore();
