@@ -42,6 +42,37 @@ toggleKey = CTRL+G
 ;;    左手释放时，模拟法术攻击，鼠标点空地人物保持不动（需要配置站立不动键)
 ;;    例如: castSkils = 12
 ;;;castSkills =
+
+
+;; 灵气技能
+;;; 不复位灵气技能。默认开启
+;;; keepAuraSkills = true
+;;; 灵气技能列表。默认已经加入了所有灵气技能，无需设置。前面加-表示移除出默认列表
+;;; auraSkills = 99,100
+
+
+;; 自动重复释放技能
+;;; 开启自动重复释放技能。默认关闭
+;;; autoRepeatEnabled = false
+
+;;; 自动重复释放技能列表
+;;; 盾击，热诚自动重复释放
+;;; autoRepeatSkills = 97,106
+
+;;; 开启关闭自动重复快捷键。
+;;; autoRepeatToggleKey = CTRL+R
+
+;;; 自动重复延迟，单位毫秒。默认100
+;;; autoRepeatDelay = 100
+
+;;; 自动停止重复释放技能，默认需要再按一次技能键
+;;;   0: 再次按该技能键关闭
+;;;   1: 按任意技能键关闭
+;;;   2: 按鼠标左键关闭
+;;;   4: 按鼠标右键关闭
+;;; 可组合。默认是7
+;;;autoRepeatAutoStop = 7
+
 ```
 技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
 
