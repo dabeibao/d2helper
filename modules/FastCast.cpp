@@ -53,6 +53,7 @@ enum {
 static bool fastCastDebug;
 static bool fastCastEnabled;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
+static bool fastCastKeepAuraSkills = true;
 
 static bool fastCastRepeatEnbled;
 static uint32_t fastCastRepeatToggleKey = Hotkey::Invalid;
@@ -79,6 +80,12 @@ static std::set<int> fastCastAttackSkills = {
     // Asn
     254, 255, 260, 259, 265, 270, 269, 247, 275, 280,
 };
+
+static std::set<int> fastCastAuraSkills = {
+    99, 100, 104, 105, 109, 110, 115, 120, 124, 125,
+    98, 102, 103, 108, 113, 114, 118, 119, 122, 123,
+};
+
 static std::set<int> fastCastRepeatSkills = {};
 
 static WNDPROC getOrigProc(HWND hwnd)
@@ -278,12 +285,12 @@ public:
         mOrigSkillId = -1;
     }
 
-    void                save()
+    void                save(bool isForce)
     {
         auto weaponSwitch = D2Util::getWeaponSwitch();
 
         cancel();
-        if (mOrigSkillId == -1 || mCurrentSwitch != weaponSwitch) {
+        if (isForce || mOrigSkillId == -1 || mCurrentSwitch != weaponSwitch) {
             mOrigSkillId = getSkillId();
             mCurrentSwitch = weaponSwitch;
             trace("Left %u save skill to %u switch %u", mIsLeft, mOrigSkillId, mCurrentSwitch);
@@ -567,12 +574,10 @@ private:
 
     Result handleRestore()
     {
-        // mRightRestore.start();
-        // mLeftRestore.start();
-        bool    needRestore = true;
-
-        if (needRestore) {
-            restoreSkill();
+        if (fastCastKeepAuraSkills && fastCastAuraSkills.contains(mCurrentSkill.skillId)) {
+            saveSkill(true);
+        } else {
+                restoreSkill();
         }
 
         if (!mPendingSkills.empty()) {
@@ -588,7 +593,7 @@ private:
         mCurrentSkill = mPendingSkills.front();
         mPendingSkills.pop_front();
 
-        saveSkill();
+        saveSkill(false);
         mRunSkillTask.startSkill(mCurrentSkill);
     }
 
@@ -597,9 +602,9 @@ private:
         return mCurrentSkill.isLeft? Left : Right;
     }
 
-    void saveSkill()
+    void saveSkill(bool isForce)
     {
-        mRestoreTasks[getRestoreIndex()].save();
+        mRestoreTasks[getRestoreIndex()].save(isForce);
     }
 
     void restoreSkill()
@@ -648,6 +653,9 @@ public:
     static bool         isRepeatable(int skill)
     {
         if (!fastCastRepeatEnbled) {
+            return false;
+        }
+        if (fastCastAuraSkills.contains(skill)) {
             return false;
         }
         return fastCastRepeatSkills.contains(skill);
@@ -787,9 +795,6 @@ static std::vector<int> fastCastLoadSkillList(Config::Section& section, const ch
         if (!ok) {
             continue;
         }
-        if (skillId < 0) {
-            continue;
-        }
         skills.push_back(skillId);
     }
     return skills;
@@ -801,6 +806,8 @@ static void fastCastLoadConfig()
 
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
+    fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", fastCastKeepAuraSkills);
+
     auto keyString = section.loadString("toggleKey");
 
     fastCastToggleKey = Hotkey::parseKey(keyString);
@@ -808,15 +815,30 @@ static void fastCastLoadConfig()
         log_trace("FastCast: toggle key %s -> 0x%llx\n", keyString.c_str(), (unsigned long long)fastCastToggleKey);
     }
 
+    auto auraSkills = fastCastLoadSkillList(section, "auraSkills");
+    for (auto skillId: auraSkills) {
+        if (skillId < 0) {
+            fastCastAuraSkills.erase(skillId);
+        } else {
+            fastCastAuraSkills.insert(skillId);
+        }
+    }
+
     auto attackSkills = fastCastLoadSkillList(section, "attackSkills");
     log_verbose("attack skills %zu", attackSkills.size());
     for (auto skillId: attackSkills) {
+        if (skillId < 0) {
+            continue;
+        }
         fastCastAttackSkills.insert(skillId);
     }
 
     auto castSkills = fastCastLoadSkillList(section, "castSkills");
-    log_verbose("case skills %zu", castSkills.size());
+    log_verbose("cast skills %zu", castSkills.size());
     for (auto skillId: castSkills) {
+        if (skillId < 0) {
+            continue;
+        }
         fastCastAttackSkills.erase(skillId);
     }
 
@@ -836,6 +858,9 @@ static void fastCastLoadConfig()
     auto repeatSkills = fastCastLoadSkillList(section, "autoRepeatSkills");
     log_verbose("Repeat skills %zu", repeatSkills.size());
     for (auto skillId: repeatSkills) {
+        if (skillId < 0) {
+            continue;
+        }
         fastCastRepeatSkills.insert(skillId);
     }
 
