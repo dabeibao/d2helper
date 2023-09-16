@@ -23,6 +23,11 @@ struct SkillTime {
     bool        isLeft;
     uint64_t    startTime;
 
+    void        clear()
+    {
+        skillId = -1;
+    }
+
     bool        isExpired() const
     {
         return startTime + 1000 < GetTickCount64();
@@ -37,9 +42,22 @@ struct SkillTime {
 #define fcDbg(fmt, ...)         do { if (fastCastDebug) D2Util::showInfo(fmt, ##__VA_ARGS__); } while(0)
 #define trace(fmt, ...)         do { if (fastCastDebug) log_trace("%s:" fmt, __FUNCTION__, ##__VA_ARGS__); log_flush(); } while (0)
 
+#define MIN_REPEAT_DELAY        (50)
+
+enum {
+    FastCastRepeatStopOnSkill           = (1 << 0),
+    FastCastRepeatStopOnLeftMouse       = (1 << 1),
+    FastCastRepeatStopOnRightMouse      = (1 << 2),
+};
+
 static bool fastCastDebug;
 static bool fastCastEnabled;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
+
+static bool fastCastRepeatEnbled;
+static uint32_t fastCastRepeatToggleKey = Hotkey::Invalid;
+static uint32_t fastCastRepeatDelay = 100;
+static uint32_t fastCastRepeatStopOnNew = 0x7;
 
 static std::set<int> fastCastAttackSkills = {
     0,
@@ -61,6 +79,7 @@ static std::set<int> fastCastAttackSkills = {
     // Asn
     254, 255, 260, 259, 265, 270, 269, 247, 275, 280,
 };
+static std::set<int> fastCastRepeatSkills = {};
 
 static WNDPROC getOrigProc(HWND hwnd)
 {
@@ -408,6 +427,7 @@ class FastCastActor {
         Idle,
         Skill,
         Restore,
+        DelayNext,
     };
 
     enum Result {
@@ -425,7 +445,7 @@ public:
     FastCastActor(): mState(Idle), mCrankCount(0),
                      mRestoreTasks{Right, Left}
     {
-        auto f = [this](Event::Type) { stop(); };
+        auto f = [this](Event::Type, DWORD, DWORD) { stop(); };
         Event::add(Event::GameStart, f);
         Event::add(Event::GameEnd, f);
 
@@ -525,7 +545,6 @@ private:
     Result startNextSkill()
     {
         if (!D2Util::isGameScreen()) {
-            mPendingSkills.clear();
             mState = Restore;
             return Continue;
         }
@@ -605,6 +624,100 @@ private:
     RestoreTask         mRestoreTasks[2];
 };
 
+class RepeatSkillTask: public Task {
+public:
+    RepeatSkillTask()
+    {
+        mRepeatSkill.clear();
+        auto f = [this](Event::Type, DWORD, DWORD) { clearAll(); };
+        Event::add(Event::GameEnd, f);
+        if (fastCastRepeatStopOnNew & FastCastRepeatStopOnLeftMouse) {
+            Event::add(Event::LeftMouseDown, f);
+        }
+        if (fastCastRepeatStopOnNew & FastCastRepeatStopOnRightMouse) {
+            Event::add(Event::RightMouseDown, f);
+        }
+    }
+
+    static RepeatSkillTask& inst()
+    {
+        static RepeatSkillTask gRepeatSkillTask;
+        return gRepeatSkillTask;
+    }
+
+    static bool         isRepeatable(int skill)
+    {
+        if (!fastCastRepeatEnbled) {
+            return false;
+        }
+        return fastCastRepeatSkills.contains(skill);
+    }
+
+    void                clearAll()
+    {
+        cancel();
+        mRepeatSkill.clear();
+    }
+
+    void                toggle(BYTE key, int skill, bool isLeft)
+    {
+
+        if (!isRepeatable(skill)) {
+            FastCastActor::inst().startSkill({key, skill, isLeft, GetTickCount64()});
+            if (fastCastRepeatStopOnNew & FastCastRepeatStopOnSkill) {
+                cancel();
+            }
+            return;
+        }
+
+        if (mRepeatSkill.skillId == skill) {
+            fcDbg(L"Stop repeat skill %d", skill);
+            cancel();
+            return;
+        }
+
+        fcDbg(L"Start repeat skill %d", skill);
+        cancel();
+        mRepeatSkill.key = key;
+        mRepeatSkill.skillId = skill;
+        mRepeatSkill.isLeft = isLeft;
+
+        run();
+    }
+
+private:
+    virtual void        start()
+    {
+        startSkill();
+    }
+    virtual void        stop()
+    {
+        mRepeatSkill.clear();
+        Task::stop();
+    }
+
+    void                startSkill()
+    {
+        if (!mRepeatSkill.isValid()) {
+            return complete();
+        }
+        if (!isFastCastAble()) {
+            mRepeatSkill.clear();
+            return complete();
+        }
+        mRepeatSkill.startTime = GetTickCount64();
+        FastCastActor::inst().startSkill(mRepeatSkill);
+
+        mDelay.start();
+        next(&RepeatSkillTask::startSkill, fastCastRepeatDelay);
+    }
+
+
+private:
+    ElapsedTime         mDelay;
+    SkillTime           mRepeatSkill;
+};
+
 static bool doFastCast(BYTE key, BYTE repeat)
 {
     if (!isFastCastAble()) {
@@ -627,8 +740,7 @@ static bool doFastCast(BYTE key, BYTE repeat)
     }
 
     fcDbg(L"KEY %u -> %u -> skill %u, left: %d\n", key, func, skillId, isLeft);
-
-    FastCastActor::inst().startSkill({key, skillId, isLeft, GetTickCount64()});
+    RepeatSkillTask::inst().toggle(key, skillId, isLeft);
 
     return true;
 }
@@ -647,6 +759,17 @@ static bool fastCastToggle(struct HotkeyConfig * config)
     if ((config->hotKey & (Hotkey::Ctrl | Hotkey::Alt)) != 0) {
         return true;
     }
+
+    return false;
+}
+
+static bool fastCastRepeatToggle(struct HotkeyConfig * config)
+{
+    RepeatSkillTask::inst().clearAll();
+    fastCastEnabled = !fastCastEnabled;
+
+    log_verbose("FastCast: toggle: %d\n", fastCastEnabled);
+    D2Util::showInfo(L"Fast Cast Auto Repeat %s", fastCastEnabled? L"Enabled" : L"Disabled");
 
     return false;
 }
@@ -679,7 +802,11 @@ static void fastCastLoadConfig()
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
     auto keyString = section.loadString("toggleKey");
+
     fastCastToggleKey = Hotkey::parseKey(keyString);
+    if (fastCastToggleKey != Hotkey::Invalid) {
+        log_trace("FastCast: toggle key %s -> 0x%llx\n", keyString.c_str(), (unsigned long long)fastCastToggleKey);
+    }
 
     auto attackSkills = fastCastLoadSkillList(section, "attackSkills");
     log_verbose("attack skills %zu", attackSkills.size());
@@ -693,10 +820,25 @@ static void fastCastLoadConfig()
         fastCastAttackSkills.erase(skillId);
     }
 
-
-    if (fastCastToggleKey != Hotkey::Invalid) {
-        log_trace("FastCast: toggle key %s -> 0x%llx\n", keyString.c_str(), (unsigned long long)fastCastToggleKey);
+    // Auto repeat skills
+    fastCastRepeatEnbled = section.loadBool("autoRepeatEnabled", fastCastRepeatEnbled);
+    keyString = section.loadString("autoRepeatToggleKey");
+    fastCastRepeatToggleKey = Hotkey::parseKey(keyString);
+    if (fastCastRepeatToggleKey != Hotkey::Invalid) {
+        log_trace("FastCast: auto repeat toggle key %s -> 0x%llx\n",
+                  keyString.c_str(), (unsigned long long)fastCastRepeatToggleKey);
     }
+    fastCastRepeatDelay = section.loadInt("autoRepeatDelay", 100);
+    if (fastCastRepeatDelay < MIN_REPEAT_DELAY) {
+        fastCastRepeatDelay = MIN_REPEAT_DELAY;
+    }
+    fastCastRepeatStopOnNew = section.loadInt("autoRepeatAutoStop", fastCastRepeatStopOnNew);
+    auto repeatSkills = fastCastLoadSkillList(section, "autoRepeatSkills");
+    log_verbose("Repeat skills %zu", repeatSkills.size());
+    for (auto skillId: repeatSkills) {
+        fastCastRepeatSkills.insert(skillId);
+    }
+
     log_verbose("FastCast: enable: %d, debug %d\n", fastCastEnabled, fastCastDebug);
 }
 
@@ -744,6 +886,9 @@ static int fastCastModuleInstall()
 
     if (fastCastToggleKey != Hotkey::Invalid) {
         keyRegisterHotkey(fastCastToggleKey, fastCastToggle, nullptr);
+    }
+    if (fastCastRepeatToggleKey != Hotkey::Invalid) {
+        keyRegisterHotkey(fastCastRepeatToggleKey, fastCastRepeatToggle, nullptr);
     }
 
     patch();

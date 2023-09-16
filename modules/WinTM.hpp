@@ -41,10 +41,10 @@ private:
         QueryPerformanceFrequency(&freq);
         mFreq = (double)freq.QuadPart;
 
-        Event::add(Event::GameStart, [this](Event::Type) {
+        Event::add(Event::GameStart, [this](Event::Type, DWORD, DWORD) {
             onGameStart();
         });
-        Event::add(Event::GameEnd, [this](Event::Type) {
+        Event::add(Event::GameEnd, [this](Event::Type, DWORD, DWORD) {
             onGameStop();
         });
     }

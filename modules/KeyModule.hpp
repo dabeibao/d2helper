@@ -2,6 +2,8 @@
 
 #include <Windows.h>
 #include <stdint.h>
+#include <vector>
+#include <functional>
 #include "d2h_module.hpp"
 
 extern D2HModule keyModule;

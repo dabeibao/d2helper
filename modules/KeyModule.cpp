@@ -213,7 +213,7 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     if (!D2Util::inGame()) {
         if (isInGame) {
             isInGame = false;
-            Event::trigger(Event::GameEnd);
+            Event::trigger(Event::GameEnd, 0, 0);
             //WinTM::inst().onGameStop();
         }
         return DefSubclassProc(hWnd, uMsg, wParam, lParam);
@@ -221,7 +221,7 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
 
     if (!isInGame) {
         isInGame = true;
-        Event::trigger(Event::GameStart);
+        Event::trigger(Event::GameStart, 0, 0);
         // static Timer delayTimer;
         // if (delayTimer.cb == NULL) {
         //     delayTimer.cb = [](Timer *) {
@@ -236,6 +236,10 @@ LRESULT CALLBACK keyModuleEvent(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPar
     switch (uMsg) {
     case WM_LBUTTONDOWN:
         blockMouseStart = GetTickCount();
+        Event::trigger(Event::LeftMouseDown, wParam, lParam);
+        break;
+    case WM_RBUTTONDOWN:
+        Event::trigger(Event::RightMouseDown, wParam, lParam);
         break;
     case WM_TIMER:
         WinTM::inst().onTimer(wParam, &blocked);

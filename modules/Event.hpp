@@ -10,10 +10,13 @@ public:
         GameStart,
         GameEnd,
 
+        LeftMouseDown,
+        RightMouseDown,
+
         TypeNumber,
     };
 
-    using Callback = std::function<void (Type type)>;
+    using Callback = std::function<void (Type type, DWORD wParam, DWORD lParam)>;
 
     static Event & inst()
     {
@@ -26,9 +29,9 @@ public:
         inst().addListener(type, cb);
     }
 
-    static void trigger(Type type)
+    static void trigger(Type type, DWORD wParam, DWORD lParam)
     {
-        inst().triggerEvent(type);
+        inst().triggerEvent(type, wParam, lParam);
     }
 
     Event()
@@ -36,7 +39,7 @@ public:
     }
 
     void addListener(Type type, Callback cb);
-    void triggerEvent(Type type);
+    void triggerEvent(Type type, DWORD wParam, DWORD lParam);
 
 private:
 
