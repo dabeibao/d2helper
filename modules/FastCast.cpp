@@ -45,9 +45,10 @@ struct SkillTime {
 #define MIN_REPEAT_DELAY        (50)
 
 enum {
-    FastCastRepeatStopOnSkill           = (1 << 0),
+    FastCastRepeatStopOnOtherSkill      = (1 << 0),
     FastCastRepeatStopOnLeftMouse       = (1 << 1),
     FastCastRepeatStopOnRightMouse      = (1 << 2),
+    FastCastRepeatStopOnSameSkill       = (1 << 3),
 };
 
 static bool fastCastDebug;
@@ -679,13 +680,13 @@ public:
 
         if (!isRepeatable(skill)) {
             FastCastActor::inst().startSkill({key, skill, isLeft, GetTickCount64()});
-            if (fastCastRepeatStopOnNew & FastCastRepeatStopOnSkill) {
+            if (fastCastRepeatStopOnNew & FastCastRepeatStopOnOtherSkill) {
                 cancel();
             }
             return;
         }
 
-        if (mRepeatSkill.skillId == skill) {
+        if (mRepeatSkill.skillId == skill && (fastCastRepeatStopOnNew & FastCastRepeatStopOnSameSkill)) {
             fcDbg(L"Stop repeat skill %d", skill);
             cancel();
             return;
@@ -861,7 +862,7 @@ static void fastCastLoadConfig()
     if (fastCastRepeatDelay < MIN_REPEAT_DELAY) {
         fastCastRepeatDelay = MIN_REPEAT_DELAY;
     }
-    fastCastRepeatStopOnNew = section.loadInt("autoRepeatAutoStop", fastCastRepeatStopOnNew);
+    fastCastRepeatStopOnNew = section.loadInt("autoRepeatStop", fastCastRepeatStopOnNew);
     auto repeatSkills = fastCastLoadSkillList(section, "autoRepeatSkills");
     log_verbose("Repeat skills %zu", repeatSkills.size());
     for (auto skillId: repeatSkills) {
