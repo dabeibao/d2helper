@@ -70,7 +70,7 @@ static std::set<int> fastCastAttackSkills = {
     // nec
 
     // pal
-    96, 97, 106, 107,
+    96, 97, 106,
 
     // Bar
     131, 142, 126, 133, 139, 144, 147, 151, 152,
