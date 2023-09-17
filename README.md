@@ -51,30 +51,38 @@ toggleKey = CTRL+G
 ;;; auraSkills = 99,100
 
 
+```
+技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
+
+## 自动重复释放技能
+需要开启快捷施法才能生效
+
+``` ini
+[helper.autorepeat]
 ;; 自动重复释放技能
-;;; 开启自动重复释放技能。默认关闭
-;;; autoRepeatEnabled = false
+;;; 开启/关闭。默认开启。需设置skills后才生效
+;;; enable = true
 
-;;; 自动重复释放技能列表
+;;; 开启/关闭自动重复快捷键。
+;;; toggleKey = CTRL+R
+
+;;; 自动重复释放技能列表, 默认空
 ;;; 盾击，热诚自动重复释放
-;;; autoRepeatSkills = 97,106
+;;; skills = 97,106
 
-;;; 开启关闭自动重复快捷键。
-;;; autoRepeatToggleKey = CTRL+R
 
-;;; 自动重复延迟，单位毫秒。默认100
-;;; autoRepeatDelay = 100
+;;; 释放技能延迟，单位毫秒。默认100
+;;; delay = 100
 
-;;; 停止重复释放技能，默认需要再按一次技能键
-;;;   1: 按任意技能键关闭
+;;; 如何停止重复释放。默认是7
+;;;   1: 按任意其他技能键关闭
 ;;;   2: 按鼠标左键关闭
 ;;;   4: 按鼠标右键关闭
 ;;;   8: 再次按该技能键关闭
-;;; 可组合。默认是7
-;;;autoRepeatStop = 7
-
+;;; 可组合。例如，选择9 表示按其他技能键和该技能键都会停止; 6表示按任意鼠标键停止
+;;; stopMode = 7
 ```
-技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
+
 
 ## 注册表沙盒
 

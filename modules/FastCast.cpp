@@ -49,6 +49,8 @@ enum {
     FastCastRepeatStopOnLeftMouse       = (1 << 1),
     FastCastRepeatStopOnRightMouse      = (1 << 2),
     FastCastRepeatStopOnSameSkill       = (1 << 3),
+
+    FastCastRepeatStopModeDefault       = 7,
 };
 
 static bool fastCastDebug;
@@ -59,7 +61,7 @@ static bool fastCastKeepAuraSkills = true;
 static bool fastCastRepeatEnbled;
 static uint32_t fastCastRepeatToggleKey = Hotkey::Invalid;
 static uint32_t fastCastRepeatDelay = 100;
-static uint32_t fastCastRepeatStopOnNew = 0x7;
+static uint32_t fastCastRepeatStopMode = FastCastRepeatStopModeDefault;
 
 static std::set<int> fastCastAttackSkills = {
     0,
@@ -644,10 +646,10 @@ public:
         mRepeatSkill.clear();
         auto f = [this](Event::Type, DWORD, DWORD) { clearAll(); };
         Event::add(Event::GameEnd, f);
-        if (fastCastRepeatStopOnNew & FastCastRepeatStopOnLeftMouse) {
+        if (fastCastRepeatStopMode & FastCastRepeatStopOnLeftMouse) {
             Event::add(Event::LeftMouseDown, f);
         }
-        if (fastCastRepeatStopOnNew & FastCastRepeatStopOnRightMouse) {
+        if (fastCastRepeatStopMode & FastCastRepeatStopOnRightMouse) {
             Event::add(Event::RightMouseDown, f);
         }
     }
@@ -680,13 +682,18 @@ public:
 
         if (!isRepeatable(skill)) {
             FastCastActor::inst().startSkill({key, skill, isLeft, GetTickCount64()});
-            if (fastCastRepeatStopOnNew & FastCastRepeatStopOnOtherSkill) {
+            if (fastCastRepeatStopMode & FastCastRepeatStopOnOtherSkill) {
                 cancel();
+            } else {
+                if (mTimer.isPending()) {
+                    // If another skill is used, we delay 600 to avoid cold down
+                    mTimer.start(600);
+                }
             }
             return;
         }
 
-        if (mRepeatSkill.skillId == skill && (fastCastRepeatStopOnNew & FastCastRepeatStopOnSameSkill)) {
+        if (mRepeatSkill.skillId == skill && (fastCastRepeatStopMode & FastCastRepeatStopOnSameSkill)) {
             fcDbg(L"Stop repeat skill %d", skill);
             cancel();
             return;
@@ -808,6 +815,36 @@ static std::vector<int> fastCastLoadSkillList(Config::Section& section, const ch
     return skills;
 }
 
+static void fastCastLoadAutoRepeatConfig()
+{
+    auto repeatSection = CfgLoad::section("helper.autorepeat");
+
+    // Auto repeat skills
+    fastCastRepeatEnbled = repeatSection.loadBool("enable", fastCastRepeatEnbled);
+    auto keyString = repeatSection.loadString("toggleKey");
+    fastCastRepeatToggleKey = Hotkey::parseKey(keyString);
+    if (fastCastRepeatToggleKey != Hotkey::Invalid) {
+        log_trace("FastCast: auto repeat toggle key %s -> 0x%llx\n",
+                  keyString.c_str(), (unsigned long long)fastCastRepeatToggleKey);
+    }
+    fastCastRepeatDelay = repeatSection.loadInt("delay", 100);
+    if (fastCastRepeatDelay < MIN_REPEAT_DELAY) {
+        fastCastRepeatDelay = MIN_REPEAT_DELAY;
+    }
+    fastCastRepeatStopMode = repeatSection.loadInt("stopMode", fastCastRepeatStopMode);
+    if (fastCastRepeatStopMode == 0) {
+        fastCastRepeatStopMode = FastCastRepeatStopModeDefault;
+    }
+    auto repeatSkills = fastCastLoadSkillList(repeatSection, "skills");
+    log_verbose("Repeat skills %zu", repeatSkills.size());
+    for (auto skillId: repeatSkills) {
+        if (skillId < 0) {
+            continue;
+        }
+        fastCastRepeatSkills.insert(skillId);
+    }
+}
+
 static void fastCastLoadConfig()
 {
     auto section = CfgLoad::section("helper.fastcast");
@@ -849,30 +886,10 @@ static void fastCastLoadConfig()
         }
         fastCastAttackSkills.erase(skillId);
     }
-
-    // Auto repeat skills
-    fastCastRepeatEnbled = section.loadBool("autoRepeatEnabled", fastCastRepeatEnbled);
-    keyString = section.loadString("autoRepeatToggleKey");
-    fastCastRepeatToggleKey = Hotkey::parseKey(keyString);
-    if (fastCastRepeatToggleKey != Hotkey::Invalid) {
-        log_trace("FastCast: auto repeat toggle key %s -> 0x%llx\n",
-                  keyString.c_str(), (unsigned long long)fastCastRepeatToggleKey);
-    }
-    fastCastRepeatDelay = section.loadInt("autoRepeatDelay", 100);
-    if (fastCastRepeatDelay < MIN_REPEAT_DELAY) {
-        fastCastRepeatDelay = MIN_REPEAT_DELAY;
-    }
-    fastCastRepeatStopOnNew = section.loadInt("autoRepeatStop", fastCastRepeatStopOnNew);
-    auto repeatSkills = fastCastLoadSkillList(section, "autoRepeatSkills");
-    log_verbose("Repeat skills %zu", repeatSkills.size());
-    for (auto skillId: repeatSkills) {
-        if (skillId < 0) {
-            continue;
-        }
-        fastCastRepeatSkills.insert(skillId);
-    }
-
     log_verbose("FastCast: enable: %d, debug %d\n", fastCastEnabled, fastCastDebug);
+
+    fastCastLoadAutoRepeatConfig();
+
 }
 
 static void __stdcall setLeftActiveSkillHook(UnitAny * unit, int nSkillId, DWORD ownerGUID)
