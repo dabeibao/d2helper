@@ -2,6 +2,7 @@
 #define D2_STRUCTS_H
 
 #include <windows.h>
+#include <stdint.h>
 
 struct GfxCell;
 struct CellFile;
@@ -396,6 +397,10 @@ struct SkillInfo {
 struct Skill {
 	struct {
 		WORD	wSkillId;
+		uint16_t unk0x02;						//0x02
+		uint32_t dwFlags[2];					//0x04
+		int8_t nCharClass;						//0x0C
+		uint8_t unk0x0D[3];						//0x0D
 	} *pSkillInfo;			//+00
 	Skill	*pNextSkill;	//+04
 	DWORD	dwMode;			//+08

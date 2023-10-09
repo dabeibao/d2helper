@@ -671,6 +671,7 @@ public:
         return fastCastRepeatSkills.contains(skill);
     }
 
+
     void                clearAll()
     {
         cancel();
@@ -709,6 +710,23 @@ public:
     }
 
 private:
+    static bool         needPause()
+    {
+        bool    mouseLeft = MOUSE_POS->x < SCREENSIZE.x / 2;
+        if (mouseLeft) {
+            if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
+                return true;
+            }
+            return false;
+        }
+
+        if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
+            return true;
+        }
+
+        return false;
+    }
+
     virtual void        start()
     {
         startSkill();
@@ -728,9 +746,11 @@ private:
             mRepeatSkill.clear();
             return complete();
         }
-        mRepeatSkill.startTime = GetTickCount64();
-        FastCastActor::inst().startSkill(mRepeatSkill);
 
+        if (!needPause()) {
+            mRepeatSkill.startTime = GetTickCount64();
+            FastCastActor::inst().startSkill(mRepeatSkill);
+        }
         mDelay.start();
         next(&RepeatSkillTask::startSkill, fastCastRepeatDelay);
     }
