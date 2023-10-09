@@ -93,6 +93,16 @@ inline int getHoldKey()
     return -1;
 }
 
+inline void activeItem(UnitAny * item, WORD x, WORD y)
+{
+    BYTE    packet[13] = { 0x20,};
+
+    *(DWORD *)&packet[1] = item->dwUnitId;
+    *(WORD *)&packet[5] = x;
+    *(WORD *)&packet[9] = y;
+    D2SendPacket(sizeof(packet), 0, packet);
+}
+
 int getSkillId(int func, bool * isLeft);
 void setSkill(WORD skillId, bool left = false);
 void setAndUpdateSkill(WORD skillId, bool isLeft);

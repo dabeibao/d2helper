@@ -826,7 +826,8 @@ struct ItemTxt {				//size = 0x1A8
 	int  dwSpeed;				//+D8
 	int  dwBitfield1;			//+DC
 	DWORD dwCost;				//+E0
-	DWORD _2[2];				//+E4
+	DWORD dwMinStack;           //+E4
+	DWORD dwMaxStack;           //+E8
 	BYTE nContainerType;		//+EC
 	BYTE _3[7];					//+ED
 	WORD wLocaleTxtNo;			//+F4

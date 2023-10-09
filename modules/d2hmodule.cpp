@@ -5,10 +5,12 @@
 extern D2HModule keyModule;
 extern D2HModule fastCastModule;
 extern D2HModule hackScriptModule;
+extern D2HModule quickPotionModule;
 
 static D2HModule * modules[] = {
     &keyModule,
     &fastCastModule,
+    &quickPotionModule,
     &hackScriptModule,
 };
 
