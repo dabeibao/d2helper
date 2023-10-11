@@ -128,7 +128,7 @@ static bool loadConfig(config_t * config)
     }
     snprintf(fullName, sizeof(fullName), "%s\\%s", path, INI_FILE_NAME);
     config_load(fullName, config);
-    log_verbose("Load Config: %d, %d, %d\n", config->is_enable, config->is_verbose, config->bag_item);
+    log_verbose("Load Config: %d, %d, %d\n", config->is_enable, config->is_verbose, config->patch_delay);
 
     return true;
 }
@@ -171,6 +171,17 @@ static void __declspec(naked) onLoad_ASM()
     }
 }
 
+static DWORD WINAPI loadDelayThread(void * ctx)
+{
+    uintptr_t   delay = (uintptr_t)ctx;
+
+    log_trace("Delay patching start\n");
+    Sleep(delay);
+    installPatch(&loadPatch);
+    log_verbose("Delay patching done\n");
+
+    return 0;
+}
 
 BOOL Install()
 {
@@ -193,8 +204,14 @@ BOOL Install()
     }
 
     module_init();
-    installPatch(&loadPatch);
     log_verbose("init done\n");
+    if (config.patch_delay <= 0) {
+        installPatch(&loadPatch);
+        return TRUE;
+    }
+
+    HANDLE  handle = CreateThread(NULL, 0, loadDelayThread, (LPVOID)(uintptr_t)config.patch_delay, 0, NULL);
+    CloseHandle(handle);
 
     return TRUE;
 }

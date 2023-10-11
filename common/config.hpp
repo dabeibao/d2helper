@@ -8,7 +8,7 @@ struct config_t {
     int         is_verbose;
     int         is_enable;
     int         is_debug;
-    uint32_t    bag_item;
+    int         patch_delay;
 };
 
 void config_load(const char * file, config_t *config);

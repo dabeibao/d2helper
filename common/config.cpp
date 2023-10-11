@@ -16,6 +16,7 @@ void config_load(const char * file, config_t *config)
     config->is_enable = cfg.load(EN_STR, 1);
     config->is_verbose = cfg.load(VERBOSE_STR);
     config->is_debug = cfg.load(DEBUG_STR);
+    config->patch_delay = cfg.load("delay", 0);
 }
 
 int Config::load(const char *key, int def)
