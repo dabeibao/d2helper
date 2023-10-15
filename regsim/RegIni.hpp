@@ -26,7 +26,7 @@ public:
             }
             auto s = dwordToIniString(value);
             section.save(key, s);
-            log_trace("Save: %s -> %s\n", key, s.c_str());
+            log_verbose("Save: %s -> %s\n", key, s.c_str());
             return ERROR_SUCCESS;
         }
         if (type == REG_SZ) {
@@ -36,7 +36,7 @@ public:
             }
             auto s = stringToIniString(value);
             section.save(key, s);
-            log_trace("Save: %s -> %s\n", key, s.c_str());
+            log_verbose("Save: %s -> %s\n", key, s.c_str());
             return ERROR_SUCCESS;
         }
 
@@ -93,7 +93,7 @@ public:
             }
             if (data != NULL) {
                 *(DWORD *)data = std::stoul(out);
-                log_trace("load: %s -> %lu\n", key, *(DWORD *)data);
+                log_verbose("load: %s -> %lu\n", key, *(DWORD *)data);
             }
             return ERROR_SUCCESS;
         }
@@ -106,7 +106,7 @@ public:
         if (data != NULL) {
             memcpy(data, out.c_str(), out.size());
             data[out.size()] = '\0';
-            log_trace("load: %s -> %s\n", key, data);
+            log_verbose("load: %s -> %s\n", key, data);
         }
         return ERROR_SUCCESS;
     }
