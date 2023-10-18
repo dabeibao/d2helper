@@ -115,24 +115,6 @@ void RemoveD2Patchs(Patch_t* pPatchStart, Patch_t* pPatchEnd)
   }
 }
 
-static bool loadConfig(config_t * config)
-{
-    char        path[512];
-    char        fullName[sizeof(path) + 32];
-    bool        ok;
-    
-    ok = getAppDirectory(path, sizeof(path));
-    if (!ok) {
-        log_trace("Cannot get APP path\n");
-        return false;
-    }
-    snprintf(fullName, sizeof(fullName), "%s\\%s", path, INI_FILE_NAME);
-    config_load(fullName, config);
-    log_verbose("Load Config: %d, %d, %d\n", config->is_enable, config->is_verbose, config->patch_delay);
-
-    return true;
-}
-
 static void onLoad_ASM();
 
 static Patcher loadPatch {
@@ -188,13 +170,13 @@ BOOL Install()
     config_t    config;
 
     log_init("d2helper.log");
-    if (!loadConfig(&config)) {
-        return FALSE;
-    }
+    config_load(&config);
 
     if (config.is_verbose) {
+        log_trace("Set trace level to verbose\n");
         log_set_verbose();
     }
+    log_verbose("Load config: %d, %d,%d, %d\n", config.is_enable, config.is_verbose, config.is_debug, config.patch_delay);
     D2Util::setVerbose(config.is_verbose);
     D2Util::setDebug(config.is_debug);
 

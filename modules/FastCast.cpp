@@ -688,7 +688,10 @@ public:
             } else {
                 if (mTimer.isPending()) {
                     // If another skill is used, we delay 600 to avoid cold down
-                    mTimer.start(600);
+                    // charge need special handling
+                    int         delay = skill == 107? 600 : 200;
+
+                    mTimer.start(delay);
                 }
             }
             return;

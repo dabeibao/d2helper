@@ -4,7 +4,6 @@
 #include "d2h_module.hpp"
 #include "d2ptrs.h"
 #include "log.h"
-#include "config.hpp"
 #include "macros.hpp"
 #include "D2CallStub.hpp"
 #include "d2vars.h"
@@ -13,6 +12,7 @@
 #include "Event.hpp"
 #include "WinTM.hpp"
 #include "hotkey.hpp"
+#include "cConfigLoader.hpp"
 
 
 #pragma comment(lib, "Comctl32.lib")
@@ -162,11 +162,11 @@ static bool keyDownPatch(BYTE keyCode, BYTE repeat)
 static void loadKeyConfig()
 {
     int         validCount = 0;
-    Config      cfg("key");
+    auto        section = CfgLoad::section("helper.key");
 
     for (int i = 0; i < ARRAY_SIZE(keyConfigs); i += 1) {
         KeyConfig *     kc = &keyConfigs[i];
-        int     key = cfg.load(kc->configName);
+        int     key = section.loadInt(kc->configName);
         if (key == 0) {
             continue;
         }

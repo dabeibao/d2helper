@@ -3,6 +3,7 @@
 #include "cConfig.hpp"
 #include <string>
 #include <direct.h>
+#include "loader.hpp"
 
 #define CONFIG_FILE_NAME       "d2ext.ini"
 
@@ -11,17 +12,17 @@ class CfgLoad
 public:
     CfgLoad(const char * iniFile = CONFIG_FILE_NAME)
     {
-        char * buf = _getcwd(NULL, 0);
-        if (buf == nullptr) {
+        char path[512];
+        bool ok = getAppDirectory(path, sizeof(path));
+        if (!ok) {
             return;
         }
-        std::string fileName(buf);
+        std::string fileName(path);
         if (fileName.size() == 0 || fileName.c_str()[fileName.size() - 1] != '\\') {
             fileName += '\\';
         }
         fileName += iniFile;
         mConfig.setFileName(fileName.c_str());
-        free(buf);
     }
 
     static Config::Section      section(const char * sectionName)

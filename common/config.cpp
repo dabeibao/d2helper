@@ -1,25 +1,20 @@
 #include <windows.h>
 #include <stdio.h>
 #include "config.hpp"
+#include "cConfigLoader.hpp"
 
 #define APP_NAME        "config"
 #define EN_STR          "enable"
 #define VERBOSE_STR     "verbose"
 #define DEBUG_STR       "debug"
 
-static char configFileName[1024];
-
-void config_load(const char * file, config_t *config)
+void config_load(config_t *config)
 {
-    snprintf(configFileName, sizeof(configFileName), "%s", file);
-    Config cfg(APP_NAME);
-    config->is_enable = cfg.load(EN_STR, 1);
-    config->is_verbose = cfg.load(VERBOSE_STR);
-    config->is_debug = cfg.load(DEBUG_STR);
-    config->patch_delay = cfg.load("delay", 0);
+    auto section = CfgLoad::section("helper.config");
+
+    config->is_enable = section.loadInt("enable", 1);
+    config->is_verbose = section.loadInt("verbose", 0);
+    config->is_debug = section.loadInt("debug", 0);
+    config->patch_delay = section.loadInt("delay", 0);
 }
 
-int Config::load(const char *key, int def)
-{
-    return GetPrivateProfileIntA(mKeyName, key, def, configFileName);
-}
