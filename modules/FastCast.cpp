@@ -812,10 +812,14 @@ static bool fastCastToggle(struct HotkeyConfig * config)
 static bool fastCastRepeatToggle(struct HotkeyConfig * config)
 {
     RepeatSkillTask::inst().clearAll();
-    fastCastEnabled = !fastCastEnabled;
+    fastCastRepeatEnbled = !fastCastRepeatEnbled;
 
-    log_verbose("FastCast: toggle: %d\n", fastCastEnabled);
-    D2Util::showInfo(L"Fast Cast Auto Repeat %s", fastCastEnabled? L"Enabled" : L"Disabled");
+    log_verbose("FastRepeatCast: toggle: %d\n", fastCastRepeatEnbled);
+    D2Util::showInfo(L"Fast Cast Auto Repeat %s", fastCastRepeatEnbled? L"Enabled" : L"Disabled");
+
+    if ((config->hotKey & (Hotkey::Ctrl | Hotkey::Alt)) != 0) {
+        return true;
+    }
 
     return false;
 }
