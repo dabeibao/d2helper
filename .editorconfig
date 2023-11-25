@@ -1,5 +1,10 @@
 root = true
 
+[*.md]
+charset = utf-8
+
 [*.{c,c++,cc,cpp,cppm,cxx,h,h++,hh,hpp,hxx,inl,ipp,ixx,tlh,tli}]
+charset = gb18030
 indent_style = space
 indent_size = 4
+tab_width = 8

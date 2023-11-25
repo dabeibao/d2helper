@@ -21,6 +21,7 @@ struct SkillTime {
     int         key;
     int         skillId;
     bool        isLeft;
+    bool        isFake;     // don't run skill, just start monitoring
     uint64_t    startTime;
 
     void        clear()
@@ -288,21 +289,29 @@ public:
         mOrigSkillId = -1;
     }
 
+    const char *        getType()
+    {
+        return mIsLeft? "LEFT" : "RIGHT";
+    }
+
     void                save(bool isForce)
     {
         auto weaponSwitch = D2Util::getWeaponSwitch();
 
+        if (mIsRunning) {
+            trace("%s: PAUSED, cur %u", getType(),  mOrigSkillId);
+        }
         cancel();
         if (isForce || mOrigSkillId == -1 || mCurrentSwitch != weaponSwitch) {
             mOrigSkillId = getSkillId();
             mCurrentSwitch = weaponSwitch;
-            trace("Left %u save skill to %u switch %u", mIsLeft, mOrigSkillId, mCurrentSwitch);
+            trace("%s: save skill to %u switch %u", getType(),  mOrigSkillId, mCurrentSwitch);
         }
     }
 
     void                resume()
     {
-        trace("Left %u resume to restore skill %u", mIsLeft, mOrigSkillId);
+        trace("%s: resume to restore skill %u", getType(), mOrigSkillId);
         run();
     }
 
@@ -361,8 +370,8 @@ private:
     virtual void        start() override
     {
         int     skillId = getSkillId();
-        trace("Restore: left %u orig %d switch %d cur %d\n",
-              mIsLeft, mOrigSkillId, mCurrentSwitch, skillId);
+        trace("%s: orig %d switch %d cur %d\n",
+              getType(), mOrigSkillId, mCurrentSwitch, skillId);
         if (needAbort()) {
             return finishRestore();
         }
@@ -391,14 +400,14 @@ private:
 
         if (mTime.elapsed() >= 60000) {
             // give up after 60 seconds
-            trace("Restore failed after 60 seconds");
+            trace("%s: Restore failed after 60 seconds", getType());
             return finishRestore();
         }
 
         int skillId = getSkillId();
         if (skillId != mOrigSkillId) {
             // Retry
-            trace("sendRestore: set kill to %d cur %d\n", mOrigSkillId, getSkillId());
+            trace("%s: set kill to %d cur %d\n", getType(), mOrigSkillId, getSkillId());
             setSkillId(mOrigSkillId);
             next(&RestoreTask::sendRestore, 1);
             return;
@@ -555,19 +564,23 @@ private:
             return Wait;
         }
 
-        startNextSkill();
-        return Wait;
+        return startNextSkill();
     }
 
     Result startNextSkill()
     {
-        if (!D2Util::isGameScreen()) {
+        mCurrentSkill = mPendingSkills.front();
+        mPendingSkills.pop_front();
+
+        saveSkill(false);
+
+        if (!D2Util::isGameScreen() || mCurrentSkill.isFake) {
             mState = Restore;
             return Continue;
         }
 
+        mRunSkillTask.startSkill(mCurrentSkill);
         mState = Skill;
-        runNextSkill();
         return Wait;
     }
 
@@ -587,7 +600,7 @@ private:
         if (fastCastKeepAuraSkills && fastCastAuraSkills.contains(mCurrentSkill.skillId)) {
             saveSkill(true);
         } else {
-                restoreSkill();
+            restoreSkill();
         }
 
         if (!mPendingSkills.empty()) {
@@ -596,15 +609,6 @@ private:
 
         mState = Idle;
         return Continue;
-    }
-
-    void runNextSkill()
-    {
-        mCurrentSkill = mPendingSkills.front();
-        mPendingSkills.pop_front();
-
-        saveSkill(false);
-        mRunSkillTask.startSkill(mCurrentSkill);
     }
 
     int getRestoreIndex()
@@ -682,7 +686,7 @@ public:
     {
 
         if (!isRepeatable(skill)) {
-            FastCastActor::inst().startSkill({key, skill, isLeft, GetTickCount64()});
+            FastCastActor::inst().startSkill({key, skill, isLeft, false, GetTickCount64()});
             if (fastCastRepeatStopMode & FastCastRepeatStopOnOtherSkill) {
                 cancel();
             } else {
@@ -764,28 +768,97 @@ private:
     SkillTime           mRepeatSkill;
 };
 
-static bool doFastCast(BYTE key, BYTE repeat)
+static bool mapKeyToSkill(int key, int *outSkillId, bool * outIsLeft)
 {
-    if (!isFastCastAble()) {
-        D2Util::showVerbose(L"Not in Game: %d, repeat %d", D2CheckUiStatus(0), repeat);
-        return false;
-    }
-
-    trace("key: %d, repeat %d, swap 0x%x", key, repeat, WEAPON_SWITCH);
-    int         func = D2Util::getKeyFunc(key);
+    int     func = D2Util::getKeyFunc(key);
 
     if (func < 0) {
         return false;
     }
 
-    bool        isLeft;
-    int         skillId = D2Util::getSkillId(func, &isLeft);
+    bool    isLeft;
+    int     skillId = D2Util::getSkillId(func, &isLeft);
     if (skillId < 0) {
         fcDbg(L"KEY %u -> %u (unbind)", key, func);
         return false;
     }
 
     fcDbg(L"KEY %u -> %u -> skill %u, left: %d\n", key, func, skillId, isLeft);
+    *outSkillId = skillId;
+    *outIsLeft = isLeft;
+    return true;
+}
+
+static bool isKeyBlocked()
+{
+    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
+        // if user is selecting/changing skill, shouldn't block him
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_STASH) || D2Util::uiIsSet(UIVAR_CUBE) ||
+        D2Util::uiIsSet(UIVAR_NPCTRADE) || D2Util::uiIsSet(UIVAR_PPLTRADE)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_CFGCTRLS)) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool isInGameArea()
+{
+    LONG    x = MOUSE_POS->x;
+    if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
+        // left panel
+        if (x <= SCREENSIZE.x / 2) {
+            return false;
+        }
+    }
+    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
+        if (x >= SCREENSIZE.x / 2) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static bool doFastCast(BYTE key, BYTE repeat)
+{
+    if (!fastCastEnabled) {
+        return false;
+    }
+    trace("key: %d, repeat %d, swap 0x%x", key, repeat, WEAPON_SWITCH);
+
+    int     skillId;
+    bool    isLeft;
+    bool    bound;
+
+    bound = mapKeyToSkill(key, &skillId, &isLeft);
+
+    if (!bound) {
+        return false;
+    }
+
+    if (!D2Util::isGameScreen()) {
+        if (isKeyBlocked()) {
+            return false;
+        }
+        FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
+        return false;
+    }
+    if (!isInGameArea()) {
+        FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
+        return false;
+    }
+
     RepeatSkillTask::inst().toggle(key, skillId, isLeft);
 
     return true;
