@@ -188,7 +188,17 @@ static int parsePatcher(HackPatcher * patch, char * tokens[], int number)
     if (number == 4) {
         patch->verify = 1;
     } else {
-        unsigned int verify = helper::toInt(tokens[4], &ok);
+        int     index;
+        if (number == 5) {
+            index = 4;
+            // our format
+            // # d2game.dll offset orig new 1
+        } else {
+            // d2hack script format:
+            // # d2game.dll offset orig new 0 1
+            index = 5;
+        }
+        unsigned int verify = helper::toInt(tokens[index], &ok);
         if (!ok) {
             return -6;
         }
