@@ -28,6 +28,14 @@ static inline void rtrim(std::string &s) {
     }).base(), s.end());
 }
 
+static inline void remove(std::string &s, const std::string_view& charsToRemove)
+{
+    auto        newEnd = std::remove_if(s.begin(), s.end(), [&](char c) {
+        return charsToRemove.find(c) != charsToRemove.npos;
+    });
+    s.erase(newEnd, s.end());
+}
+
 // trim from both ends (in place)
 static inline void trim(std::string &s) {
     rtrim(s);
