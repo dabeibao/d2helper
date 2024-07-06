@@ -56,6 +56,7 @@ enum {
 
 static bool fastCastDebug;
 static bool fastCastEnabled;
+static bool fastCastQuickSwapBack = true;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
 static bool fastCastKeepAuraSkills = true;
 
@@ -482,6 +483,9 @@ public:
 
     void onServerSkillUpdate(bool isLeft, int nSkillId)
     {
+        if (!fastCastEnabled) {
+            return;
+        }
         trace("Server set skill, left %d, skill %d\n", isLeft, nSkillId);
         if (isLeft) {
             mRestoreTasks[Left].onServerSkillUpdate(nSkillId);
@@ -951,6 +955,7 @@ static void fastCastLoadConfig()
 
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
+    fastCastQuickSwapBack = section.loadBool("quickSwapBack", true);
     fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", fastCastKeepAuraSkills);
 
     auto keyString = section.loadString("toggleKey");
@@ -994,7 +999,6 @@ static void fastCastLoadConfig()
 
 static void __stdcall setLeftActiveSkillHook(UnitAny * unit, int nSkillId, DWORD ownerGUID)
 {
-
     D2SetLeftActiveSkill(unit, nSkillId, ownerGUID);
     FastCastActor::inst().onServerSkillUpdate(true, nSkillId);
 }
@@ -1041,7 +1045,9 @@ static int fastCastModuleInstall()
         keyRegisterHotkey(fastCastRepeatToggleKey, fastCastRepeatToggle, nullptr);
     }
 
-    patch();
+    if (fastCastQuickSwapBack) {
+        patch();
+    }
 
     return 0;
 }
