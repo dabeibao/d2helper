@@ -25,7 +25,6 @@ struct KeyConfig {
     bool                (*func)(KeyConfig * config);
 };
 
-static void keydownPatch_ASM();
 static bool doTransmute(KeyConfig * config);
 
 // dll base: 5CC10000

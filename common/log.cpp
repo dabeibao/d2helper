@@ -1,9 +1,10 @@
+#include <cstdio>
 #include <stdio.h>
 #include <stdarg.h>
 #include <windows.h>
 #include "log.h"
 
-static FILE * log_file = NULL;
+static FILE * log_file = stdout;
 static int log_level = LOG_LEVEL_INFO;
 
 int log_init(const char * name)
@@ -21,10 +22,15 @@ int log_init(const char * name)
 
 void log_release(void)
 {
-    if (log_file != NULL) {
-        fclose(log_file);
-        log_file = NULL;
+    if (log_file == nullptr) {
+        return;
     }
+    if (log_file == stdout) {
+        return;
+    }
+
+    fclose(log_file);
+    log_file = NULL;
 }
 
 void log_set_verbose(void)

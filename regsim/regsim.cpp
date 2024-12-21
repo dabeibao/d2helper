@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "log.h"
+
 #include "../detours/detours.h"
 #include "regsim.h"
 #include "KeyMap.hpp"

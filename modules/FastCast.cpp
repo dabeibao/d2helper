@@ -12,7 +12,6 @@
 #include "D2Utils.hpp"
 #include "Define.h"
 #include "Task.hpp"
-#include "D2CallStub.hpp"
 #include "Event.hpp"
 #include "cConfigLoader.hpp"
 #include "hotkey.hpp"
@@ -59,6 +58,8 @@ static bool fastCastEnabled;
 static bool fastCastQuickSwapBack = true;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
 static bool fastCastKeepAuraSkills = true;
+static bool fastCastRepeatOnDown = true;
+static uint32_t fastCastRepeatOnDownDelay = 100;
 
 static bool fastCastRepeatEnbled;
 static uint32_t fastCastRepeatToggleKey = Hotkey::Invalid;
@@ -139,6 +140,64 @@ LRESULT WINAPI mySendMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
 
     return ret;
+}
+
+static bool isKeyBlocked()
+{
+    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
+        // if user is selecting/changing skill, shouldn't block him
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_STASH) || D2Util::uiIsSet(UIVAR_CUBE) ||
+        D2Util::uiIsSet(UIVAR_NPCTRADE) || D2Util::uiIsSet(UIVAR_PPLTRADE)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_CFGCTRLS)) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool needPause()
+{
+    bool    mouseLeft = MOUSE_POS->x < SCREENSIZE.x / 2;
+    if (mouseLeft) {
+        if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
+            return true;
+        }
+        return false;
+    }
+
+    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
+        return true;
+    }
+
+    return false;
+}
+
+static bool isInGameArea()
+{
+    LONG    x = MOUSE_POS->x;
+    if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
+        // left panel
+        if (x <= SCREENSIZE.x / 2) {
+            return false;
+        }
+    }
+    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
+        if (x >= SCREENSIZE.x / 2) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static bool isFastCastAble()
@@ -688,7 +747,6 @@ public:
 
     void                toggle(BYTE key, int skill, bool isLeft)
     {
-
         if (!isRepeatable(skill)) {
             FastCastActor::inst().startSkill({key, skill, isLeft, false, GetTickCount64()});
             if (fastCastRepeatStopMode & FastCastRepeatStopOnOtherSkill) {
@@ -721,22 +779,6 @@ public:
     }
 
 private:
-    static bool         needPause()
-    {
-        bool    mouseLeft = MOUSE_POS->x < SCREENSIZE.x / 2;
-        if (mouseLeft) {
-            if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
-                return true;
-            }
-            return false;
-        }
-
-        if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
-            return true;
-        }
-
-        return false;
-    }
 
     virtual void        start()
     {
@@ -772,6 +814,90 @@ private:
     SkillTime           mRepeatSkill;
 };
 
+class RepeatKeyTask: public Task {
+public:
+    RepeatKeyTask():
+        mKey(-1), mSkill(-1), mIsLeft(false)
+    {
+        auto f = [this](Event::Type, DWORD, DWORD) { cancel(); };
+        Event::add(Event::GameEnd, f);
+    }
+
+    static RepeatKeyTask& inst()
+    {
+        static RepeatKeyTask gRepeatKeyTask;
+        return gRepeatKeyTask;
+    }
+
+    void                runKey(BYTE key, int skillId, bool isLeft)
+    {
+        RepeatSkillTask::inst().toggle(key, skillId, isLeft);
+        if (!fastCastRepeatOnDown) {
+            return;
+        }
+
+        cancel();
+        if (RepeatSkillTask::isRepeatable(skillId)) {
+            // RepeatSkillTask will handle repeat itself
+            return;
+        }
+
+
+        mKey = key;
+        mSkill = skillId;
+        mIsLeft = isLeft;
+        run();
+    }
+
+private:
+    bool                canContinue()
+    {
+        if (!fastCastRepeatOnDown) {
+            return false;
+        }
+        if (mKey == -1) {
+            return false;
+        }
+        if ((GetAsyncKeyState(mKey) & 0x8000) == 0) {
+            return false;
+        }
+        if (!D2Util::isGameScreen()) {
+            return false;
+        }
+        return true;
+    }
+
+    virtual void        start()
+    {
+        next(&RepeatKeyTask::checkKey, fastCastRepeatOnDownDelay);
+    }
+
+    virtual void        stop()
+    {
+        mKey = -1;
+        mSkill = -1;
+        mIsLeft = false;
+        Task::stop();
+    }
+
+    void                checkKey()
+    {
+        if (!canContinue()) {
+            return complete();
+        }
+        if (!needPause()) {
+            RepeatSkillTask::inst().toggle(mKey, mSkill, mIsLeft);
+        }
+        next(&RepeatKeyTask::checkKey, fastCastRepeatOnDownDelay);
+    }
+
+
+private:
+    int                 mKey;
+    int                 mSkill;
+    bool                mIsLeft;
+};
+
 static bool mapKeyToSkill(int key, int *outSkillId, bool * outIsLeft)
 {
     int     func = D2Util::getKeyFunc(key);
@@ -793,53 +919,17 @@ static bool mapKeyToSkill(int key, int *outSkillId, bool * outIsLeft)
     return true;
 }
 
-static bool isKeyBlocked()
-{
-    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
-        // if user is selecting/changing skill, shouldn't block him
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_STASH) || D2Util::uiIsSet(UIVAR_CUBE) ||
-        D2Util::uiIsSet(UIVAR_NPCTRADE) || D2Util::uiIsSet(UIVAR_PPLTRADE)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_CFGCTRLS)) {
-        return true;
-    }
-
-    return false;
-}
-
-static bool isInGameArea()
-{
-    LONG    x = MOUSE_POS->x;
-    if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
-        // left panel
-        if (x <= SCREENSIZE.x / 2) {
-            return false;
-        }
-    }
-    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
-        if (x >= SCREENSIZE.x / 2) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 static bool doFastCast(BYTE key, BYTE repeat)
 {
     if (!fastCastEnabled) {
         return false;
     }
     trace("key: %d, repeat %d, swap 0x%x", key, repeat, WEAPON_SWITCH);
+
+    // We will repeat the key down ourselves, so ignore this message
+    if (repeat && fastCastRepeatOnDown) {
+       return false;
+    }
 
     int     skillId;
     bool    isLeft;
@@ -855,15 +945,15 @@ static bool doFastCast(BYTE key, BYTE repeat)
         if (isKeyBlocked()) {
             return false;
         }
-        FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
+        //FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
         return false;
     }
     if (!isInGameArea()) {
-        FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
+        //FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
         return false;
     }
 
-    RepeatSkillTask::inst().toggle(key, skillId, isLeft);
+    RepeatKeyTask::inst().runKey(key, skillId, isLeft);
 
     return true;
 }
@@ -877,7 +967,7 @@ static bool fastCastToggle(struct HotkeyConfig * config)
         fastCastEnabled = true;
     }
     log_verbose("FastCast: toggle: %d\n", fastCastEnabled);
-    D2Util::showInfo(L"快速施法已%s", fastCastEnabled? L"啟用" : L"禁用");
+    D2Util::showInfo(L"QuickCast %s", fastCastEnabled? L"Enabled" : L"Disabled");
 
     if ((config->hotKey & (Hotkey::Ctrl | Hotkey::Alt)) != 0) {
         return true;
@@ -925,6 +1015,7 @@ static void fastCastLoadAutoRepeatConfig()
 
     // Auto repeat skills
     fastCastRepeatEnbled = repeatSection.loadBool("enable", fastCastRepeatEnbled);
+
     auto keyString = repeatSection.loadString("toggleKey");
     fastCastRepeatToggleKey = Hotkey::parseKey(keyString);
     if (fastCastRepeatToggleKey != Hotkey::Invalid) {
@@ -957,6 +1048,11 @@ static void fastCastLoadConfig()
     fastCastEnabled = section.loadBool("enable", true);
     fastCastQuickSwapBack = section.loadBool("quickSwapBack", true);
     fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", fastCastKeepAuraSkills);
+    fastCastRepeatOnDown = section.loadBool("repeatOnDown", fastCastRepeatOnDown);
+    fastCastRepeatOnDownDelay = section.loadInt("repeatOnDownDelay", fastCastRepeatOnDownDelay);
+    if (fastCastRepeatOnDownDelay > MIN_REPEAT_DELAY) {
+        fastCastRepeatOnDownDelay = MIN_REPEAT_DELAY;
+    }
 
     auto keyString = section.loadString("toggleKey");
 
@@ -994,7 +1090,6 @@ static void fastCastLoadConfig()
     log_verbose("FastCast: enable: %d, debug %d\n", fastCastEnabled, fastCastDebug);
 
     fastCastLoadAutoRepeatConfig();
-
 }
 
 static void __stdcall setLeftActiveSkillHook(UnitAny * unit, int nSkillId, DWORD ownerGUID)
