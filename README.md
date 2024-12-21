@@ -53,6 +53,10 @@ toggleKey = CTRL+G
 ;;; auraSkills = 99,100
 
 
+;;; 键盘按住时自动重复释放技能。默认开启
+;;; repeatOnDown = true
+;;; repeatOnDownDelay = 100
+
 ```
 技能id参见 [skills.md](https://github.com/dabeibao/d2helper/blob/main/examples/skills.md)
 
