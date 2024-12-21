@@ -21,11 +21,12 @@
 
 struct KeyConfig {
     const char *        configName;
-    int                 key;
+    uint32_t            key;
     bool                (*func)(KeyConfig * config);
 };
 
 static bool doTransmute(KeyConfig * config);
+static bool doReload(KeyConfig * config);
 
 // dll base: 5CC10000
 // CPU Disasm
@@ -42,6 +43,7 @@ static bool doTransmute(KeyConfig * config);
 // };
 
 static KeyConfig keyConfigs[] = {
+    {"reload", 0, doReload,},
     { "transmute", 0, doTransmute,}
 };
 
@@ -78,12 +80,20 @@ static bool doTransmute(KeyConfig * )
     return true;
 }
 
+static bool doReload(KeyConfig *)
+{
+    if (!D2Util::inGame()) {
+        return false;
+    }
+
+    module_on_reload();
+    D2Util::showInfo(L"d2helper reloaded");
+    return true;
+}
+
 static uint32_t keyGetCombineKey(BYTE keyCode)
 {
     uint32_t    newKey = keyCode;
-    if (!D2Util::isGameScreen()) {
-        return Hotkey::Invalid;
-    }
     if (keyCode == VK_CONTROL || keyCode == VK_MENU || keyCode == VK_SHIFT) {
         newKey = 0;
     }
@@ -99,10 +109,8 @@ static uint32_t keyGetCombineKey(BYTE keyCode)
     return newKey;
 }
 
-static bool keyProcessHotKey(BYTE keyCode)
+static bool keyProcessHotKey(uint32_t hotkey)
 {
-    auto hotkey = keyGetCombineKey(keyCode);
-
     log_verbose("KEY: hot 0x%x\n", hotkey);
     if (hotkey == Hotkey::Invalid) {
         return false;
@@ -124,8 +132,9 @@ static bool keyDownPatch(BYTE keyCode, BYTE repeat)
 {
     log_verbose("key down called, player %p\n", PLAYER);
 
+    auto realKey = keyGetCombineKey(keyCode);
     if (!repeat) {
-        bool blocked = keyProcessHotKey(keyCode);
+        bool blocked = keyProcessHotKey(realKey);
         if (blocked) {
             return true;
         }
@@ -134,7 +143,7 @@ static bool keyDownPatch(BYTE keyCode, BYTE repeat)
         if (keyPreFunc[i] == nullptr) {
             break;
         }
-        bool    blocked = keyPreFunc[i](keyCode, repeat);
+        bool    blocked = keyPreFunc[i](realKey, repeat);
         if (blocked) {
             return blocked;
         }
@@ -148,7 +157,7 @@ static bool keyDownPatch(BYTE keyCode, BYTE repeat)
         if (kc == nullptr) {
             break;
         }
-        if (kc->key == keyCode) {
+        if (kc->key == realKey) {
             bool ok = kc->func(kc);
             if (ok) {
                 return true;
@@ -165,8 +174,9 @@ static void loadKeyConfig()
 
     for (int i = 0; i < ARRAY_SIZE(keyConfigs); i += 1) {
         KeyConfig *     kc = &keyConfigs[i];
-        int     key = section.loadInt(kc->configName);
-        if (key == 0) {
+        auto keyString = section.loadString(kc->configName);
+        auto key = Hotkey::parseKey(keyString);
+        if (key == Hotkey::Invalid) {
             continue;
         }
         log_verbose("Map key %d to %s\n", key, kc->configName);
@@ -277,6 +287,8 @@ static void keyModuleOnLoad()
 
 static void keyModuleReload()
 {
+    memset(validKeyConfigs, 0, sizeof(validKeyConfigs));
+    memset(hotkeyConfig, 0, sizeof(hotkeyConfig));
     loadKeyConfig();
 }
 

@@ -14,3 +14,4 @@ struct D2HModule {
 int module_init();
 void module_destroy();
 void module_on_load();
+void module_on_reload();

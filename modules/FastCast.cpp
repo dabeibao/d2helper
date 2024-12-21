@@ -43,6 +43,7 @@ struct SkillTime {
 #define trace(fmt, ...)         do { if (fastCastDebug) log_trace("%s:" fmt, __FUNCTION__, ##__VA_ARGS__); log_flush(); } while (0)
 
 #define MIN_REPEAT_DELAY        (50)
+#define DEFAULT_REPEAT_DELAY    (100)
 
 enum {
     FastCastRepeatStopOnOtherSkill      = (1 << 0),
@@ -59,14 +60,14 @@ static bool fastCastQuickSwapBack = true;
 static uint32_t fastCastToggleKey = Hotkey::Invalid;
 static bool fastCastKeepAuraSkills = true;
 static bool fastCastRepeatOnDown = true;
-static uint32_t fastCastRepeatOnDownDelay = 100;
+static uint32_t fastCastRepeatOnDownDelay = DEFAULT_REPEAT_DELAY;
 
 static bool fastCastRepeatEnbled;
 static uint32_t fastCastRepeatToggleKey = Hotkey::Invalid;
-static uint32_t fastCastRepeatDelay = 100;
+static uint32_t fastCastRepeatDelay = DEFAULT_REPEAT_DELAY;
 static uint32_t fastCastRepeatStopMode = FastCastRepeatStopModeDefault;
 
-static std::set<int> fastCastAttackSkills = {
+static const std::set<int> defFastCastAttackSkills = {
     0,
     // amazon
     10, 14, 19, 24, 30, 34,
@@ -86,11 +87,14 @@ static std::set<int> fastCastAttackSkills = {
     // Asn
     254, 255, 260, 259, 265, 270, 269, 247, 275, 280,
 };
+static std::set<int> fastCastAttackSkills;
 
-static std::set<int> fastCastAuraSkills = {
+static const std::set<int> defFastCastAuraSkills = {
     99, 100, 104, 105, 109, 110, 115, 120, 124, 125,
     98, 102, 103, 108, 113, 114, 118, 119, 122, 123,
 };
+
+static std::set<int> fastCastAuraSkills;
 
 static std::set<int> fastCastRepeatSkills = {};
 
@@ -1032,6 +1036,7 @@ static void fastCastLoadAutoRepeatConfig()
     }
     auto repeatSkills = fastCastLoadSkillList(repeatSection, "skills");
     log_verbose("Repeat skills %zu", repeatSkills.size());
+    fastCastRepeatSkills = {};
     for (auto skillId: repeatSkills) {
         if (skillId < 0) {
             continue;
@@ -1047,9 +1052,9 @@ static void fastCastLoadConfig()
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
     fastCastQuickSwapBack = section.loadBool("quickSwapBack", true);
-    fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", fastCastKeepAuraSkills);
-    fastCastRepeatOnDown = section.loadBool("repeatOnDown", fastCastRepeatOnDown);
-    fastCastRepeatOnDownDelay = section.loadInt("repeatOnDownDelay", fastCastRepeatOnDownDelay);
+    fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", true);
+    fastCastRepeatOnDown = section.loadBool("repeatOnDown", true);
+    fastCastRepeatOnDownDelay = section.loadInt("repeatOnDownDelay", DEFAULT_REPEAT_DELAY);
     if (fastCastRepeatOnDownDelay > MIN_REPEAT_DELAY) {
         fastCastRepeatOnDownDelay = MIN_REPEAT_DELAY;
     }
@@ -1062,6 +1067,7 @@ static void fastCastLoadConfig()
     }
 
     auto auraSkills = fastCastLoadSkillList(section, "auraSkills");
+    fastCastAuraSkills = defFastCastAuraSkills;
     for (auto skillId: auraSkills) {
         if (skillId < 0) {
             fastCastAuraSkills.erase(skillId);
@@ -1072,6 +1078,7 @@ static void fastCastLoadConfig()
 
     auto attackSkills = fastCastLoadSkillList(section, "attackSkills");
     log_verbose("attack skills %zu", attackSkills.size());
+    fastCastAttackSkills = defFastCastAttackSkills;
     for (auto skillId: attackSkills) {
         if (skillId < 0) {
             continue;
@@ -1106,6 +1113,11 @@ static void __stdcall setRightActiveSkillHook(UnitAny * unit, int nSkillId, DWOR
 
 static void patch()
 {
+    static bool         isPatched;
+
+    if (isPatched) {
+        return;
+    }
     // CPU Disasm
     // Address   Hex dump          Command                                                              Comments
     // 6FB5C7E0  |.  E8 29FDF5FF   CALL <JMP.&D2Common.#10546>                                          ; |\D2Common.#10546
@@ -1125,13 +1137,13 @@ static void patch()
     // base = D2Client(0x6FAB0000) offset = 0x6FB5C7ED - base = 0xAC7ED
     offset = GetDllOffset("D2CLIENT.DLL", 0x6FB5C7ED - DLLBASE_D2CLIENT);
     PatchCALL(offset, (DWORD)(uintptr_t)setRightActiveSkillHook, 5);
+    isPatched = true;
 }
 
-static int fastCastModuleInstall()
+static void fastCastRegister()
 {
     fastCastLoadConfig();
     keyRegisterHandler(doFastCast);
-    FastCastActor::inst();
 
     if (fastCastToggleKey != Hotkey::Invalid) {
         keyRegisterHotkey(fastCastToggleKey, fastCastToggle, nullptr);
@@ -1143,6 +1155,15 @@ static int fastCastModuleInstall()
     if (fastCastQuickSwapBack) {
         patch();
     }
+}
+
+static int fastCastModuleInstall()
+{
+    FastCastActor::inst();
+    RepeatSkillTask::inst();
+    RepeatSkillTask::inst();
+
+    fastCastRegister();
 
     return 0;
 }
@@ -1157,8 +1178,11 @@ static void fastCastModuleOnLoad()
 
 static void fastCastModuleReload()
 {
+    FastCastActor::inst().stop();
+    RepeatSkillTask::inst().clearAll();
+    RepeatKeyTask::inst().cancel();
+    fastCastRegister();
 }
-
 
 D2HModule fastCastModule = {
     "Fast Cast",

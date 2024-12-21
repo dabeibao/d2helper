@@ -18,7 +18,10 @@ verbose = 0
 ``` ini
 [helper.key]
 ;;; 合成快捷键. 快捷键是VK_的十进制值
-transmute = DDD
+;; 按下空格 合成 (需打开盒子界面才生效)
+transmute = space
+;; 按下CTRL和L重新加载配置
+reload = CTRL+L
 ```
 
 ## 快捷施法（类似重置版）

@@ -68,3 +68,15 @@ void module_on_load()
         }
     }
 }
+
+void module_on_reload()
+{
+    if (!isModuleInited) {
+        return;
+    }
+    for (auto m: modules) {
+        if (m->reload != nullptr) {
+            m->reload();
+        }
+    }
+}

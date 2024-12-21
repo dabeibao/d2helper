@@ -42,7 +42,7 @@ static bool getCtrlKey(const std::string&s, uint32_t * func)
     static std::unordered_map<std::string, uint32_t> keys = {
         {"ctrl",        Hotkey::Ctrl},
         {"alt",         Hotkey::Alt},
-        {"Shift",       Hotkey::Shift},
+        {"shift",       Hotkey::Shift},
 
         {"tab",         VK_TAB},
         {"space",       VK_SPACE},
