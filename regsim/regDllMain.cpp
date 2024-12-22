@@ -22,3 +22,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     }
     return TRUE;
 }
+
+// force generate .lib (to avoid building d2reg every time)
+extern "C" __declspec(dllexport) void Init()
+{
+}
