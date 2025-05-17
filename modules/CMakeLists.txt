@@ -7,6 +7,11 @@ add_library(modules OBJECT
     hackscript.cpp hackscriptImpl.cpp
 )
 
+if (PD2_SUPPORT)
+    target_sources(modules PRIVATE PD2Support.cpp)
+    target_compile_definitions(modules PRIVATE -DPD2_SUPPORT)
+endif()
+
 target_include_directories(modules INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(modules common D2Dll)
 

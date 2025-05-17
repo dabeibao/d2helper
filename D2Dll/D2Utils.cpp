@@ -23,16 +23,13 @@ void D2Util::showInfo(const LPCWSTR fmt, ...)
     D2ShowGameMessage(info, 0);
 }
 
-int D2Util::getKeyFunc(BYTE key)
+int D2Util::getKeyFuncFromTable(BYTE key, D2_KEY_TABLE *keyTable)
 {
     int         index = 0;
 
     for (int i = 0; i < D2_KEY_TABLE_FIRST_FUNC_NUM; i += 1, index += 1) {
         int     offset = D2_KEY_TABLE_FIRST_FUNC + i;
-        auto    keyMap = &KEY_TABLE[offset];
-        if (keyMap->key == 0xffff) {
-            continue;
-        }
+        auto    keyMap = &keyTable[offset];
         if (keyMap->key == key) {
             return index / 2;
         }
@@ -40,16 +37,19 @@ int D2Util::getKeyFunc(BYTE key)
 
     for (int i = 0; i < D2_KEY_TABLE_SECOND_FUNC_NUM; i += 1, index += 1) {
         int     offset = D2_KEY_TABLE_SECOND_FUNC + i;
-        auto    keyMap = &KEY_TABLE[offset];
-        if (keyMap->key == 0xffff) {
-            continue;
-        }
+        auto    keyMap = &keyTable[offset];
         if (keyMap->key == key) {
             return index / 2;
         }
     }
 
     return -1;
+
+}
+
+int D2Util::getKeyFunc(BYTE key)
+{
+    return getKeyFuncFromTable(key, KEY_TABLE);
 }
 
 int D2Util::getSkillId(int func, bool * isLeft)

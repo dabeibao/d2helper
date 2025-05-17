@@ -11,6 +11,9 @@ add_compile_options(/W3 /WX /Zi /wd4819 /D_CRT_SECURE_NO_WARNINGS)
 
 option(WITH_REGSIM "Enable registry sandbox" ON)
 
+# most MODs do not alter the key table
+option(PD2_SUPPORT "Enable PD2 support" OFF)
+
 add_subdirectory(D2Dll)
 add_subdirectory(common)
 add_subdirectory(modules)

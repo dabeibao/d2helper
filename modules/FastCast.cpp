@@ -4,6 +4,7 @@
 #include <set>
 #include "HelpFunc.h"
 #include "Define.h"
+#include "PD2Support.hpp"
 #include "d2h_module.hpp"
 #include "d2ptrs.h"
 #include "KeyModule.hpp"
@@ -261,20 +262,29 @@ private:
         if (!D2Util::isGameScreen()) {
             return done();
         }
-        sendMouseNormal();
+
+        bool isShift = false;
+        if (isLeft()) {
+            // If shift is held during a melee attack, the player cannot reach monsters
+            // Thus force no-shift with melee attacks
+            if (fastCastAttackSkills.contains(mSkill.skillId)) {
+                isShift = false;
+            } else {
+                isShift = true;
+            }
+        }
+
+        if (PD2Enabled()) {
+            PD2Click(isLeft()? PD2ClickType::Left : PD2ClickType::Right, isShift, MOUSE_POS->x, MOUSE_POS->y);
+        } else {
+            sendMouseNormal(isShift);
+        }
         done();
     }
 
-    void sendMouseNormal()
+    void sendMouseNormal(bool isShift)
     {
         if (isLeft()) {
-
-            // If shift is held during a melee attack, the player cannot reach monsters
-            bool isShift = true;
-            if (fastCastAttackSkills.find(mSkill.skillId) != fastCastAttackSkills.end()) {
-                isShift = false;
-            }
-
             // clickMap works without requring a hold key
             D2Util::sendClick(D2Util::LeftDown, MOUSE_POS->x, MOUSE_POS->y, isShift);
 
@@ -865,7 +875,13 @@ private:
 
 static bool mapKeyToSkill(int key, int *outSkillId, bool * outIsLeft)
 {
-    int     func = D2Util::getKeyFunc(key);
+    int     func;
+
+    if (PD2Enabled()) {
+        func = PD2GetFunc(key);
+    } else {
+        func = D2Util::getKeyFunc(key);
+    }
 
     if (func < 0) {
         return false;
@@ -1008,6 +1024,10 @@ static void fastCastLoadConfig()
 
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
+
+    auto pd2KeyTable = section.loadInt("PD2KeyTable", 0);
+    PD2Setup(pd2KeyTable);
+
     fastCastQuickSwapBack = section.loadBool("quickSwapBack", true);
     fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", true);
     fastCastRepeatOnDown = section.loadBool("repeatOnDown", true);

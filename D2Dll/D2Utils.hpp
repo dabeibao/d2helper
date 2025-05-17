@@ -79,6 +79,7 @@ inline BYTE getWeaponSwitch()
     return WEAPON_SWITCH;
 }
 
+int getKeyFuncFromTable(BYTE key, D2_KEY_TABLE *keyTable);
 int getKeyFunc(BYTE key);
 
 inline int getHoldKey()
