@@ -7,6 +7,7 @@
 #include "d2h_module.hpp"
 #include "d2ptrs.h"
 #include "KeyModule.hpp"
+#include "d2structs.h"
 #include "d2vars.h"
 #include "log.h"
 #include "D2Utils.hpp"
@@ -146,62 +147,28 @@ LRESULT WINAPI mySendMessage(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return ret;
 }
 
-static bool isKeyBlocked()
-{
-    if (D2Util::uiIsSet(UIVAR_CURRSKILL)) {
-        // if user is selecting/changing skill, shouldn't block him
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_STASH) || D2Util::uiIsSet(UIVAR_CUBE) ||
-        D2Util::uiIsSet(UIVAR_NPCTRADE) || D2Util::uiIsSet(UIVAR_PPLTRADE)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_CHATINPUT)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
-        return true;
-    }
-    if (D2Util::uiIsSet(UIVAR_CFGCTRLS)) {
-        return true;
-    }
-
-    return false;
-}
-
-static bool needPause()
-{
-    bool    mouseLeft = MOUSE_POS->x < SCREENSIZE.x / 2;
-    if (mouseLeft) {
-        if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
-            return true;
-        }
-        return false;
-    }
-
-    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
-        return true;
-    }
-
-    return false;
-}
 
 static bool isInGameArea()
 {
     LONG    x = MOUSE_POS->x;
-    if (D2Util::uiIsSet(UIVAR_STATS) || D2Util::uiIsSet(UIVAR_QUEST) || D2Util::uiIsSet(UIVAR_PET)) {
-        // left panel
-        if (x <= SCREENSIZE.x / 2) {
+    bool    mouseLeft = x <= SCREENSIZE.x / 2;
+
+    if (mouseLeft) {
+        if ((UI_PANEL_STATE & UiPanelOpenLeft) != 0) {
             return false;
         }
-    }
-    if (D2Util::uiIsSet(UIVAR_INVENTORY) || D2Util::uiIsSet(UIVAR_SKILLS)) {
-        if (x >= SCREENSIZE.x / 2) {
-            return false;
-        }
+        return true;
     }
 
+    if ((UI_PANEL_STATE & UiPanelOpenRight) != 0) {
+        return false;
+    }
     return true;
+}
+
+static bool needPause()
+{
+    return !isInGameArea();
 }
 
 static bool isFastCastAble()
@@ -294,38 +261,33 @@ private:
         if (!D2Util::isGameScreen()) {
             return done();
         }
-
-        POINT screenPos = { MOUSE_POS->x, MOUSE_POS->y};
-        mCurrentPos = screenPos;
-        //D2Util::screenToAutoMap(&screenPos, &mCurrentPos);
-        trace("send mouse event skill %d cur %d\n",
-              mSkill.skillId, getSkillId());
-        DWORD pos = ((DWORD)mCurrentPos.x) | (((DWORD)mCurrentPos.y) << 16);
-        if (isLeft()) {
-            int         holdKey = -1;
-
-            // It is not an attack skill
-            if (fastCastAttackSkills.find(mSkill.skillId) == fastCastAttackSkills.end()) {
-                holdKey = D2Util::getHoldKey();
-                fcDbg(L"Hold key: %d", holdKey);
-            }
-
-            fcDbg(L"Hold key: %d, skill %d", holdKey, mSkill.skillId);
-            if (holdKey != -1) {
-                DefSubclassProc(origD2Hwnd, WM_KEYDOWN, holdKey, 0);
-            }
-
-            mySendMessage(origD2Hwnd, WM_LBUTTONDOWN, MK_LBUTTON, pos);
-            mySendMessage(origD2Hwnd, WM_LBUTTONUP, MK_LBUTTON, pos);
-
-            if (holdKey != -1) {
-                DefSubclassProc(origD2Hwnd, WM_KEYUP, holdKey, 0);
-            }
-        } else {
-            mySendMessage(origD2Hwnd, WM_RBUTTONDOWN, MK_RBUTTON, pos);
-            mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON, pos);
-        }
+        sendMouseNormal();
         done();
+    }
+
+    void sendMouseNormal()
+    {
+        if (isLeft()) {
+
+            // If shift is held during a melee attack, the player cannot reach monsters
+            bool isShift = true;
+            if (fastCastAttackSkills.find(mSkill.skillId) != fastCastAttackSkills.end()) {
+                isShift = false;
+            }
+
+            // clickMap works without requring a hold key
+            D2Util::sendClick(D2Util::LeftDown, MOUSE_POS->x, MOUSE_POS->y, isShift);
+
+            // clickMap won't release the click until a delay is introduced.
+            // but adding a delay will cause skill icon to blink.
+            // Use the SendMessage trick instead
+            DWORD pos = ((DWORD)MOUSE_POS->x) | (((DWORD)MOUSE_POS->y) << 16);
+            mySendMessage(origD2Hwnd, WM_LBUTTONUP, MK_LBUTTON, pos);
+            //D2Util::sendClick(D2Util::LeftUp, MOUSE_POS->x, MOUSE_POS->y, false);
+        } else {
+            D2Util::sendClick(D2Util::RightDown, MOUSE_POS->x, MOUSE_POS->y, false);
+            D2Util::sendClick(D2Util::RightUp, MOUSE_POS->x, MOUSE_POS->y, false);
+        }
     }
 
     void done()
@@ -336,7 +298,6 @@ private:
 private:
     ElapsedTime mTime;
     SkillTime   mSkill;
-    POINT       mCurrentPos;
     int         mOrigSkill;
 };
 
@@ -946,10 +907,6 @@ static bool doFastCast(BYTE key, BYTE repeat)
     }
 
     if (!D2Util::isGameScreen()) {
-        if (isKeyBlocked()) {
-            return false;
-        }
-        //FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
         return false;
     }
     if (!isInGameArea()) {

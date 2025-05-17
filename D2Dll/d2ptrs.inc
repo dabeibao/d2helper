@@ -39,6 +39,10 @@ D2FUNCPTR(D2CLIENT, 0x6FB3CB90, GetPlayerUnit, UnitAny * __stdcall, (void))
 
 D2FUNCPTR2(D2CLIENT, DLLBASE_D2CLIENT + 0x8CB90, DLLBASE_D2CLIENT + 0x8CB90, Transmute, void __fastcall, (void) )
 
+D2FUNCPTR2(D2CLIENT, DLLBASE_D2CLIENT + 0xBE240, DLLBASE_D2CLIENT + 0x18250, GetLevelNameStub, wchar_t * __fastcall, (DWORD levelID))
+D2FUNCPTR(D2CLIENT, DLLBASE_D2CLIENT + 0x1BF20, ClickMap, void __stdcall, (DWORD mouseFlag, DWORD x, DWORD y, DWORD type))
+
+
 D2VARPTR2(D2CLIENT,  0x6FBCC1C0, 0x6FBCCF24, AutomapLayerList,   AutomapLayer *) //所有AutomapLayer列表
 D2VARPTR2(D2CLIENT,  0x6FBCC1C4, 0x11CF28+DLLBASE_D2CLIENT, AutomapLayer,       AutomapLayer *) //当前所在的AutomapLayer
 
@@ -85,6 +89,9 @@ D2VARPTR2(D2CLIENT,  0x6FBCC028, 0x6FBCCAA4, ChatTextLength,         int)
 D2VARPTR2(D2CLIENT,  0x6FBCB824, 0x11C94C+DLLBASE_D2CLIENT, MousePos,           D2_POINT_REV )//鼠标位置
 D2VARPTR(D2CLIENT, 0x6FBC995C, MouseOffsetY, int)
 D2VARPTR(D2CLIENT, 0x6FBC9960, MouseOffsetX, int)
+D2VARPTR(D2CLIENT, 0x6FBCC418, ScreenOffsetX, int)
+D2VARPTR(D2CLIENT, 0x6FBCC414, UIPanelState, int)
+D2VARPTR(D2CLIENT, DLLBASE_D2CLIENT+0x11C3EC, AlwaysRun, int)
 
 D2VARPTR2(D2CLIENT,  0x6FB8BC54, 0x6FBA7F98, LastMousePos,		D2_POINT_REV )//最后的鼠标位置
 D2VARPTR2(D2CLIENT,  0x6FB90EB8, 0xEE4AC+DLLBASE_D2CLIENT, CursorInvGridX,     DWORD)//最后的物品栏位置
@@ -164,6 +171,12 @@ D2FUNCPTR2(D2GFX,  0x6FA8B9C0, 0x6FA881A0,   DrawLine,               void __stdc
 D2FUNCPTR2(D2GFX,  0x6FA8B080, 0x6FA87E60,   DrawCellFile,           void __stdcall, (CellContext *context, DWORD xPos, DWORD yPos, DWORD dw1, DWORD dwTransLvl, BYTE *coltab))
 D2FUNCPTR2(D2GFX,  0x6FA8AFF0, 0x6FA87DD0,   DrawAutomapCell,        void __stdcall, (CellContext *context, DWORD xpos, DWORD ypos, RECT *cliprect, DWORD dwTransLvl))
 D2FUNCPTR2(D2GFX,  0x6FA87FC0, 0x6FA8B0D0,  MinimizeWindows,        void __stdcall, (DWORD dwFlag))
+
+D2FUNCPTR(D2GFX, -10013, IsCutScene, BOOL, ())
+D2FUNCPTR(D2GFX, -10012, CheckPerspectivePosition, BOOL __stdcall, (int x, int y))
+D2FUNCPTR(D2GFX, -10023, AdjustPerspectivePosition, void __stdcall, (int x, int y, int n, int *px, int *py))
+D2VARPTR(D2GFX, 0x6FA90BE0, GFXInitialized, BOOL)
+D2VARPTR(D2GFX, 0x6FA91268, GFXPointer, uintptr_t)
 
 D2VARPTR2(D2GFX,  0x6FA9D66C, 0x6FA9D640, WinState,			DWORD)
 

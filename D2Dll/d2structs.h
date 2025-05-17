@@ -1319,5 +1319,12 @@ sgptDataTables
   +D0C - bWriteBinFiles (BOOL)
 */
 
+enum UiPanelState {
+    UiPanelNone         = 0,
+    UiPanelOpenRight    = 1,
+    UiPanelOpenLeft     = 2,
+    UiPanelOpenBoth     = UiPanelOpenRight | UiPanelOpenLeft,
+};
+
 
 #endif 

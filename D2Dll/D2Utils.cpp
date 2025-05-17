@@ -3,6 +3,7 @@
 #include "d2ptrs.h"
 #include "D2Utils.hpp"
 #include "Define.h"
+#include "d2structs.h"
 #include "d2vars.h"
 
 bool D2Util::gVerbose;
@@ -159,10 +160,16 @@ bool D2Util::isGameScreen()
     if (D2Util::uiIsSet(UIVAR_MODITEM)) {
         return false;
     }
-    if (D2Util::uiIsSet(UIVAR_PPLTRADE)) {
+    if (D2Util::uiIsSet(UIVAR_MSGLOG)) {
         return false;
     }
-    if (D2Util::uiIsSet(UIVAR_MSGLOG)) {
+
+    if ((UI_PANEL_STATE & UiPanelOpenBoth) == UiPanelOpenBoth) {
+        return false;
+    }
+
+#if 0
+    if (D2Util::uiIsSet(UIVAR_PPLTRADE)) {
         return false;
     }
     if (D2Util::uiIsSet(UIVAR_STASH)) {
@@ -176,6 +183,7 @@ bool D2Util::isGameScreen()
     if (left && right) {
         return false;
     }
-
+#endif
     return true;
 }
+

@@ -109,10 +109,30 @@ void setAndUpdateSkill(WORD skillId, bool isLeft);
 void castSkill(int x, int y, bool left = false);
 void screenToAutoMap(const POINT * screenPos, POINT * mapPos);
 
+enum ClickType {
+    LeftDown = 0,
+    LeftUp = 2,
+    RightDown = 3,
+    RightUp = 5,
+};
+
+enum {
+    ClickShift = 0x04,
+    ClickRun = 0x08,
+};
+
+inline void sendClick(ClickType clickType, int screenX, int screenY, bool isShift)
+{
+    int flags = isShift? 0x04 : 0;
+    if (*p_D2AlwaysRun) {
+        flags |= 0x08;
+    }
+    D2ClickMap(clickType, screenX, screenY, flags);
+}
+
 ClientState getState();
 
 // In game screen
 bool isGameScreen();
-
 
 }

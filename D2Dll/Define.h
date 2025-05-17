@@ -43,6 +43,8 @@
 
 #define UI_STATUS_TABLE (p_D2UiStatusTable)
 
+#define UI_PANEL_STATE (*p_D2UIPanelState)
+
 #define MOUSE_POS       (p_D2MousePos)
 #define MOUSE_OFFSET_X  (*p_D2MouseOffsetX)
 #define MOUSE_OFFSET_Y  (*p_D2MouseOffsetY)
