@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdlib>
 #include <windows.h>
 #include <string>
 #include <string.h>
@@ -90,11 +91,12 @@ public:
     double loadDouble(const char * section, const char * name, double def=0) const
     {
         auto str = loadString(section, name, "");
-        try {
-            return std::stod(str);
-        } catch (...) {
+        char * errPtr;
+        double v = std::strtod(str.c_str(), &errPtr);
+        if (errPtr == str.c_str()) {
             return def;
         }
+        return v;
     }
 
     bool loadBool(const char * section, const char * name, bool def = false) const
@@ -112,13 +114,12 @@ public:
             return true;
         }
 
-        try {
-            int i = std::stoi(str);
-            return i != 0;
-        } catch (...) {
+        bool ok;
+        int v = helper::toInt(str, &ok);
+        if (!ok) {
+            return def;
         }
-
-        return def;
+        return v != 0;
     }
 
     void loadList(const char * section, const char * name, std::vector<std::string> & list) const

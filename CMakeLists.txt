@@ -7,7 +7,33 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_BUILD_TYPE Release)
 
+set(CMAKE_CXX_FLAGS "/DNDEBUG")
 add_compile_options(/W3 /WX /Zi /wd4819 /D_CRT_SECURE_NO_WARNINGS)
+add_compile_options(
+    /O2                     # Optimize for speed
+    /Ob2                    # Inline aggressively
+    /Ot                     # Favor fast code
+    /Oi                     # Use intrinsics
+    /GL                     # Whole program optimization
+    /Gy                     # Function-level linking (enables ICF)
+    /Gw                     # Enable data-level COMDAT folding
+    /GR-                    # Disable RTTI
+    /fp:fast                # Fast floating-point math
+    /D_HAS_EXCEPTIONS=0
+    /EHs-c-                 # Disable exceptions
+    /MD                     # Multithreaded DLL runtime
+    /arch:SSE2              # SSE2 for 32-bit target
+
+    /Zc:strictStrings       # Enables strict string literal conversion rules.
+    /Zc:rvalueCast          # Enforces rvalue cast rules.
+    /Zc:referenceBinding    # Enforces reference binding rules.
+)
+add_link_options(/DEBUG
+    "$<$<CONFIG:Release>:/OPT:REF>"
+    "$<$<CONFIG:Release>:/OPT:ICF>"
+    "$<$<CONFIG:Release>:/INCREMENTAL:NO>"
+    "$<$<CONFIG:Release>:/LTCG>"
+)
 
 option(WITH_REGSIM "Enable registry sandbox" ON)
 
