@@ -10,6 +10,7 @@
 #include "KeyModule.hpp"
 #include "d2structs.h"
 #include "d2vars.h"
+#include "keyModule.hpp"
 #include "log.h"
 #include "D2Utils.hpp"
 #include "Define.h"
@@ -251,9 +252,19 @@ private:
             }
             return next(&RunTask::checkSkill, 1);
         }
+        if (skillId == 52) {
+            // Enchant needs some delay to select the unit
+            return next(&RunTask::delayMouseDown, 300);
+        }
+
         fcDbg(L"Skill %d set", mSkill.skillId);
         trace("wait skill %d done\n", mSkill.skillId);
         //next(&RunActor::sendMouseDown, 0);
+        sendMouseDown();
+    }
+
+    void delayMouseDown()
+    {
         sendMouseDown();
     }
 
@@ -274,15 +285,54 @@ private:
             }
         }
 
-        if (PD2Enabled()) {
-            PD2Click(isLeft()? PD2ClickType::Left : PD2ClickType::Right, isShift, MOUSE_POS->x, MOUSE_POS->y);
-        } else {
-            sendMouseNormal(isShift);
-        }
+        dispatchSendMouse(isShift);
+
         done();
     }
 
-    void sendMouseNormal(bool isShift)
+    void dispatchSendMouse(bool isShift)
+    {
+        if (PD2Enabled()) {
+            // PD2 rewrites the message handler.
+            // Use its own SendMessage hack
+            PD2Click(isLeft()? PD2ClickType::Left : PD2ClickType::Right, isShift, MOUSE_POS->x, MOUSE_POS->y);
+            return;
+        }
+        return mouseDownWithClickMap(isShift);
+
+        #if 0
+        // By default prefer sendMessage hack. It is more stable (so far...)
+        if (!isShift) {
+            mouseDownWithMessage();
+            return;
+        }
+
+        int holdKey = D2Util::getHoldKey();
+        if (holdKey == -1) {
+            // user doesn't set the hold key.
+            // Need to use clickMap
+            return mouseDownWithClickMap(isShift);
+        }
+
+        DefSubclassProc(origD2Hwnd, WM_KEYDOWN, holdKey, 0);
+        mouseDownWithMessage();
+        DefSubclassProc(origD2Hwnd, WM_KEYUP, holdKey, 0);
+        #endif
+    }
+
+    void mouseDownWithMessage()
+    {
+        DWORD pos = ((DWORD)MOUSE_POS->x) | (((DWORD)MOUSE_POS->y) << 16);
+        if (isLeft()) {
+            mySendMessage(origD2Hwnd, WM_LBUTTONDOWN, MK_LBUTTON, pos);
+            mySendMessage(origD2Hwnd, WM_LBUTTONUP, MK_LBUTTON, pos);
+        } else {
+            mySendMessage(origD2Hwnd, WM_RBUTTONDOWN, MK_RBUTTON, pos);
+            mySendMessage(origD2Hwnd, WM_RBUTTONUP, MK_RBUTTON, pos);
+        }
+    }
+
+    void mouseDownWithClickMap(bool isShift)
     {
         if (isLeft()) {
             // clickMap works without requring a hold key
