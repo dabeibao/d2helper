@@ -1075,8 +1075,10 @@ static void fastCastLoadConfig()
     fastCastDebug = section.loadBool("debug", false);
     fastCastEnabled = section.loadBool("enable", true);
 
+#ifdef PD2_SUPPORT
     auto pd2KeyTable = section.loadInt("PD2KeyTable", 0);
     PD2Setup(pd2KeyTable);
+#endif
 
     fastCastQuickSwapBack = section.loadBool("quickSwapBack", true);
     fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", true);

@@ -1,3 +1,4 @@
+#include <cstdint>
 #include "Define.h"
 #include "Event.hpp"
 #include "HelpFunc.h"
@@ -6,7 +7,8 @@
 #include "d2ptrs.h"
 #include "d2structs.h"
 #include "log.h"
-#include <cstdint>
+
+static const char * pd2dll = "ProjectDiablo.dll";
 
 bool PD2IsEnabled;
 static double PD2Xscale = 1.0;
@@ -109,7 +111,7 @@ void PD2Click(PD2ClickType click, bool isShift, int x, int y)
 
 static bool PD2SetupHook(uintptr_t keyTabOffset)
 {
-    uintptr_t offset = GetDllOffset("ProjectDiablo.dll", keyTabOffset);
+    uintptr_t offset = GetDllOffset(pd2dll, keyTabOffset);
     if (offset == 0) {
         return false;
     }
@@ -128,8 +130,69 @@ static bool PD2SetupHook(uintptr_t keyTabOffset)
     return true;
 }
 
+constexpr size_t strlen_const(const char* str) {
+    size_t len = 0;
+    while (str[len] != '\0') ++len;
+    return len;
+}
+
+static uintptr_t PD2FindKeyTableOffset()
+{
+    // 10185330  /.  55            PUSH EBP
+    // 10185331  |.  8BEC          MOV EBP,ESP
+    // 10185333  |.  53            PUSH EBX
+    // 10185334  |.  8B5D 08       MOV EBX,DWORD PTR SS:[ARG.1]
+    // 10185337  |.  F743 0C 00000 TEST DWORD PTR DS:[EBX+0C],40000000
+    // 1018533E  |.  0F85 B9000000 JNZ 101853FD
+    // 10185344  |.  56            PUSH ESI
+    // 10185345  |.  8B73 08       MOV ESI,DWORD PTR DS:[EBX+8]
+    // 10185348  |.  33D2          XOR EDX,EDX
+    // 1018534A  |.  57            PUSH EDI
+    // 1018534B  |.  8B3D D4F63D10 MOV EDI,DWORD PTR DS:[103DF6D4]   <<< Store the pointer to key table
+    // 10185351  |.  8BCF          MOV ECX,EDI
+    static const BYTE pattern[] = {
+        0x33, 0xD2,                             // XOR EDX,EDX
+        0x57,                                   // PUSH EDI
+        0x8B, 0x3d, 0x00, 0x00, 0x00, 0x00,     // MOV EDI,DWORD PTR DS:[103DF6D4]
+        0x8B, 0xCF,                             // MOV ECX,EDI
+    };
+    static constexpr const char *mask = "xxxxx????xx";
+    static_assert(strlen_const(mask) == sizeof(pattern), "Pattern and mask has different size");
+
+    BYTE *base;
+    size_t size;
+    bool ok = GetDllInfo(pd2dll, &base, &size);
+    if (!ok || base == nullptr) {
+        log_trace("%s is not loaded\n", pd2dll);
+        return 0;
+    }
+
+    size_t offset = 0;
+    uintptr_t baseAddr = (uintptr_t)base;
+    while (offset < size) {
+        auto next = FindPattern(&base[offset], size - offset, pattern, mask, sizeof(pattern));
+        if (next < 0) {
+            log_trace("%s cannot find key table\n", pd2dll);
+            return 0;
+        }
+        uintptr_t addr = *(uint32_t *)(baseAddr + offset + next + 5);
+        if (addr > baseAddr && addr < baseAddr + size - sizeof(pattern)) {
+            log_trace("%s find key table at 0x%x (0x%x + 0x%x)",
+                      pd2dll, addr, (uint32_t)baseAddr, addr - baseAddr);
+            return addr - baseAddr;
+        }
+        offset += next + sizeof(pattern);
+    }
+
+    return false;
+}
+
 void PD2Setup(uintptr_t keyTableOffset)
 {
+    if (keyTableOffset == 1) {
+        keyTableOffset = PD2FindKeyTableOffset();
+    }
+
     bool isEnable = keyTableOffset != 0;
 
     PD2IsEnabled = false;

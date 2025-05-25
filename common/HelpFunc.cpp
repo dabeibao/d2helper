@@ -1,4 +1,6 @@
+#include <cstdint>
 #include <windows.h>
+#include <Psapi.h>
 #include <vector>
 #include <string>
 #include "HelpFunc.h"
@@ -449,4 +451,44 @@ void GB2GBK(char *szBuf)
 	__finally{
 		delete[] pcBuf;
 	}
+}
+
+intptr_t FindPattern(BYTE *base, size_t mem_size, const BYTE * pattern, const char * mask, size_t size)
+{
+    if (mem_size < size) {
+        return -1;
+    }
+
+    for (size_t i = 0; i <= mem_size - size; ++i) {
+        bool found = true;
+        for (size_t j = 0; j < size; ++j) {
+            if (mask[j] != '?' && base[i + j] != pattern[j]) {
+                found = false;
+                break;
+            }
+        }
+        if (found) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+bool GetDllInfo(const char *dllName, PBYTE* outBase, size_t * outSize)
+{
+    *outBase = nullptr;
+    *outSize = 0;
+
+    HMODULE hModule = GetModuleHandle(dllName);
+    if (hModule == nullptr) {
+        return false;
+    }
+
+    MODULEINFO modInfo;
+    GetModuleInformation(GetCurrentProcess(), hModule, &modInfo, sizeof(modInfo));
+
+    *outBase = (BYTE *)modInfo.lpBaseOfDll;
+    *outSize = modInfo.SizeOfImage;
+
+    return true;
 }

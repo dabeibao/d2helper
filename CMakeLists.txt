@@ -37,9 +37,6 @@ add_link_options(/DEBUG
 
 option(WITH_REGSIM "Enable registry sandbox" ON)
 
-# most MODs do not alter the key table
-option(PD2_SUPPORT "Enable PD2 support" OFF)
-
 add_subdirectory(D2Dll)
 add_subdirectory(common)
 add_subdirectory(modules)
@@ -55,10 +52,20 @@ add_library(helper STATIC Install.cpp)
 target_link_libraries(helper D2Dll common modules)
 target_link_libraries(d2helper helper)
 
+add_library(pd2helper SHARED
+    DllMain.cpp
+    Install.cpp
+    d2helper.def
+)
+target_link_libraries(pd2helper D2Dll common pd2modules)
+
 if (WITH_REGSIM)
     add_subdirectory(regsim)
     target_compile_definitions(d2helper PRIVATE REGSIM_ON)
     target_link_libraries(d2helper regsim)
+
+    target_compile_definitions(pd2helper PRIVATE REGSIM_ON)
+    target_link_libraries(pd2helper regsim)
 endif()
 
 add_subdirectory(test)

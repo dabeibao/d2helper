@@ -57,7 +57,10 @@ int MyMultiByteToWideChar(
 						LPWSTR lpWideCharStr,  // wide-character buffer
 						int cchWideChar        // size of buffer
 						);
-	void GB2GBK(char *szBuf);
+void GB2GBK(char *szBuf);
+
+bool GetDllInfo(const char *dllName, PBYTE* outBase, size_t * outSize);
+intptr_t FindPattern(BYTE *base, size_t mem_size, const BYTE * pattern, const char * mask, size_t size);
 
 
 

@@ -1,4 +1,4 @@
-add_library(modules OBJECT
+set(SOURCES
     d2hmodule.cpp
     Event.cpp Timer.cpp WinTM.cpp
     KeyModule.cpp hotkey.cpp
@@ -7,13 +7,22 @@ add_library(modules OBJECT
     hackscript.cpp hackscriptImpl.cpp
 )
 
-if (PD2_SUPPORT)
-    target_sources(modules PRIVATE PD2Support.cpp)
-    target_compile_definitions(modules PRIVATE -DPD2_SUPPORT)
-endif()
+add_library(modules OBJECT
+    ${SOURCES}
+)
 
 target_include_directories(modules INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(modules common D2Dll)
+
+add_library(pd2modules OBJECT
+    ${SOURCES}
+    PD2Support.cpp
+)
+
+target_compile_definitions(pd2modules PRIVATE -DPD2_SUPPORT)
+target_include_directories(pd2modules INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(pd2modules common D2Dll)
+
 
 add_library(loadscript SHARED hackscriptImpl.cpp)
 target_compile_definitions(loadscript PRIVATE BUILD_HACKSCRIPT)
