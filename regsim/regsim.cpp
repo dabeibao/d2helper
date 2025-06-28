@@ -56,6 +56,7 @@ LONG (WINAPI * Real_RegCloseKey)(HKEY a0) = RegCloseKey;
 #define BLZ_KEY_W       L"SOFTWARE\\Blizzard Entertainment\\Diablo II"
 
 static RegIni * gRegIni;
+static bool regFallbackEnabld = false;
 
 static bool isBlzKey(HKEY hKey, LPCSTR subKey)
 {
@@ -83,6 +84,10 @@ static bool isBlzKeyW(HKEY hKey, LPCWSTR subKey)
 
 static bool isAllowQueryRedirect(const char * key)
 {
+    if (!regFallbackEnabld) {
+        return false;
+    }
+
     static const char * notAllowKeys[] = {
         "InstallPath", "Save Path",
         "Preferred Realm",
@@ -175,6 +180,7 @@ LONG WINAPI Mine_RegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved,
         if (rv == ERROR_SUCCESS) {
             return rv;
         }
+
         // fallback to real registry
         log_verbose("RegSetValueExA key %p value %hs fallback\n", hKey, lpValueName);
     }
@@ -211,18 +217,25 @@ LONG WINAPI Mine_RegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpReser
 
     log_debug("%s entered\n", __FUNCTION__);
     if (KeyMap::inst().hasKey(hKey)) {
-        DWORD   size = (lpcbData == NULL)? 0 : *lpcbData;
+        DWORD   size = (lpcbData == NULL || lpData == NULL)? 0 : *lpcbData;
         DWORD   outSize = 0;
 
         rv = gRegIni->load(lpValueName, lpData, size, &outSize, lpType);
         log_verbose("RegQueryValueExA from BLZ rv %lu key %p value %s type %lu data %lu(%lu)\n",
                   rv, hKey, lpValueName, getInt(lpType), getInt(lpcbData), outSize);
+
         if (rv != ERROR_FILE_NOT_FOUND || !isAllowQueryRedirect(lpValueName)) {
             if (lpcbData != NULL) {
                 *lpcbData = outSize;
             }
+
+            // The win32 API design. If data is null, it means caller is querying the size
+            if (rv == ERROR_MORE_DATA && lpData == NULL) {
+                rv = ERROR_SUCCESS;
+            }
             return rv;
         }
+
         // fallback to default
         log_verbose("RegQueryValueExA key %p value %hs fallback\n", hKey, lpValueName);
     }
@@ -285,6 +298,8 @@ extern "C" int RegsimInit()
     if (!enabled) {
         return 0;
     }
+
+    regFallbackEnabld = section.loadBool("enableFallback", regFallbackEnabld);
 
     char        path[512];
     char        prePath[512 + 32];

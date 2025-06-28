@@ -97,10 +97,6 @@ public:
         }
         SET_VALUE(type, loadType);
 
-        if (size == 0) {
-            return ERROR_SUCCESS;
-        }
-
         if (loadType == REG_DWORD) {
             *outSize = sizeof(DWORD);
             if (size < *outSize) {
