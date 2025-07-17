@@ -515,6 +515,7 @@ private:
 
     void                finishRestore()
     {
+        trace("%s: Restore DONE", getType());
         mIsMonitoring = false;
         mOrigSkillId = -1;
         done();
@@ -599,6 +600,8 @@ public:
                 return;
             }
         }
+
+        trace("start skill %d isLeft: %d fake %d", newSkill.skillId, newSkill.isLeft, newSkill.isFake);
         mPendingSkills.push_back(newSkill);
 
         crank();
@@ -685,11 +688,11 @@ private:
 
     Result handleRestore()
     {
-        if (fastCastKeepAuraSkills && fastCastAuraSkills.contains(mCurrentSkill.skillId)) {
+        if (!mCurrentSkill.isFake &&
+            fastCastKeepAuraSkills && fastCastAuraSkills.contains(mCurrentSkill.skillId)) {
             saveSkill(true);
-        } else {
-            restoreSkill();
         }
+        restoreSkill();
 
         if (!mPendingSkills.empty()) {
             return startNextSkill();
@@ -773,6 +776,7 @@ public:
     void                toggle(BYTE key, int skill, bool isLeft)
     {
         if (!isRepeatable(skill)) {
+            trace("RS: toggle key %d skill %d isLeft: %d", key, skill, isLeft);
             FastCastActor::inst().startSkill({key, skill, isLeft, false, GetTickCount64()});
             if (fastCastRepeatStopMode & FastCastRepeatStopOnOtherSkill) {
                 cancel();
@@ -856,6 +860,8 @@ public:
 
     void                runKey(BYTE key, int skillId, bool isLeft)
     {
+
+        trace("toggle skill %d isLeft: %d delay%d ", skillId, isLeft, fastCastRepeatOnDownDelay);
         RepeatSkillTask::inst().toggle(key, skillId, isLeft);
         if (!fastCastRepeatOnDown) {
             return;
@@ -911,6 +917,8 @@ private:
             return complete();
         }
         if (!needPause()) {
+
+            trace("toggle skill %d isLeft: %d delay%d ", mSkill, mIsLeft, fastCastRepeatOnDownDelay);
             RepeatSkillTask::inst().toggle(mKey, mSkill, mIsLeft);
         }
         next(&RepeatKeyTask::checkKey, fastCastRepeatOnDownDelay);
@@ -950,6 +958,27 @@ static bool mapKeyToSkill(int key, int *outSkillId, bool * outIsLeft)
     return true;
 }
 
+static bool needFake()
+{
+    if (!isInGameArea()) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_GAMEMENU)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_INTERACT)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_MODITEM)) {
+        return true;
+    }
+    if (D2Util::uiIsSet(UIVAR_MSGLOG)) {
+        return true;
+    }
+
+    return false;
+}
+
 static bool doFastCast(BYTE key, BYTE repeat)
 {
     if (!fastCastEnabled) {
@@ -972,12 +1001,23 @@ static bool doFastCast(BYTE key, BYTE repeat)
         return false;
     }
 
-    if (!D2Util::isGameScreen()) {
+
+    if (D2Util::uiIsSet(UIVAR_CURRSKILL) || D2Util::uiIsSet(UIVAR_CHATINPUT) || D2Util::uiIsSet(UIVAR_CFGCTRLS) ||
+        D2Util::uiIsSet(UIVAR_CUBE) || D2Util::uiIsSet(UIVAR_STASH) || D2Util::uiIsSet(UIVAR_PPLTRADE) ||
+        D2Util::uiIsSet(UIVAR_NPCTRADE)) {
+        // These controls will consume the key, so we needn't do anything
         return false;
     }
-    if (!isInGameArea()) {
-        //FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
-        return false;
+
+    if (needFake()) {
+        bool mouseRight = MOUSE_POS->x >= SCREENSIZE.x / 2;
+        FastCastActor::inst().startSkill({key, skillId, isLeft, true, GetTickCount64()});
+        if (D2Util::uiIsSet(UIVAR_INVENTORY) && mouseRight) {
+            // Allow other plugin (HM) to move items with hotkey
+            // May see the icon blinking
+            return false;
+        }
+        return true;
     }
 
     RepeatKeyTask::inst().runKey(key, skillId, isLeft);
@@ -1084,7 +1124,7 @@ static void fastCastLoadConfig()
     fastCastKeepAuraSkills = section.loadBool("keepAuraSkills", true);
     fastCastRepeatOnDown = section.loadBool("repeatOnDown", true);
     fastCastRepeatOnDownDelay = section.loadInt("repeatOnDownDelay", DEFAULT_REPEAT_DELAY);
-    if (fastCastRepeatOnDownDelay > MIN_REPEAT_DELAY) {
+    if (fastCastRepeatOnDownDelay < MIN_REPEAT_DELAY) {
         fastCastRepeatOnDownDelay = MIN_REPEAT_DELAY;
     }
 
