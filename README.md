@@ -106,6 +106,12 @@ toggleKey = CTRL+G
 
 ;;; 开启/关闭。默认开启
 enable = true
+
+;;; 如果在D2RegSim未找到，从注册表获取
+;;; enableFallback = false
+
+;;; 支持命令行 -regdir xxx 指定D2RegSimPre的路径
+;;; enableCommandLine = true
 ```
 注册表格式参见
    [D2RegSim.ini](https://github.com/dabeibao/d2helper/blob/main/examples/D2RegSim.ini)

@@ -1,4 +1,6 @@
+#include <vector>
 #include <windows.h>
+#include <shlwapi.h>
 
 #include "../detours/detours.h"
 #include "regsim.h"
@@ -6,6 +8,10 @@
 #include "RegIni.hpp"
 #include "loader.hpp"
 #include "cConfigLoader.hpp"
+#include "log.h"
+#include "strutils.hpp"
+
+#pragma comment(lib, "shlwapi.lib")
 
 #define REG_SIM_PRESET  "D2RegSimPre.ini"
 #define REG_SIM_FILE    "D2RegSim.ini"
@@ -286,6 +292,49 @@ static void detachDetours()
 
 static bool regsimIsInited;
 
+// support -regdir in command line
+static void getRegDir(char *outPath, int size, bool enableCommandLine)
+{
+    getAppDirectory(outPath, size);
+
+    if (!enableCommandLine) {
+        return;
+    }
+    char* cmdLine = GetCommandLineA();
+    if (!cmdLine) {
+        return;
+    }
+
+    // Copy command line to a modifiable buffer
+    char buffer[2048];
+    snprintf(buffer, sizeof(buffer), "%s", cmdLine);
+
+    std::vector<std::string> list;
+    helper::split(buffer, ' ', list);
+    for (size_t i = 0; i < list.size() - 1; i += 1) {
+        if (_stricmp(list[i].c_str(), "-regdir")) {
+            continue;
+        }
+
+        auto& dir = list[i + 1];
+        if (PathIsRelativeA(dir.c_str())) {
+            char tmp[MAX_PATH];
+            snprintf(tmp, sizeof(tmp), "%s\\%s", outPath, dir.c_str());
+            snprintf(outPath, size, "%s", tmp);
+            log_verbose("%d: %s, dir %s out %s\n", i, list[i].c_str(), dir.c_str(), outPath);
+        } else {
+            snprintf(outPath, size, "%s", dir.c_str());
+        }
+        for (int i = strlen(outPath) - 1; i >= 0; i -= 1) {
+            if (outPath[i] != '\\') {
+                break;
+            }
+            outPath[i] = '\0';
+        }
+        break;
+    }
+}
+
 extern "C" int RegsimInit()
 {
     if (regsimIsInited) {
@@ -307,7 +356,12 @@ extern "C" int RegsimInit()
 
     log_trace("Regsim load\n");
     regsimIsInited = true;
-    getAppDirectory(path, sizeof(path));
+
+    bool        enableCommandLine = section.loadBool("enableCommandLine", true);
+
+    getRegDir(path, sizeof(path), enableCommandLine);
+
+    log_verbose("REGSIM: use registry folder %s, cmd: %d\n", path, enableCommandLine);
     snprintf(prePath, sizeof(prePath), "%s\\%s", path, REG_SIM_PRESET);
     snprintf(fullName, sizeof(fullName), "%s\\%s", path, REG_SIM_FILE);
 
